@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      Debug builds may talk to a plain-HTTP dev server:
+        - 10.0.2.2  : Android emulator -> host machine (php artisan serve)
+        - localhost : reverse-tethered devices
+      Add your machine's LAN IP here to test on a physical device.
+      Release builds are HTTPS-only.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">osta-rosto-2.test</domain>
+        <!-- Host machine Wi-Fi LAN IP for on-device testing -->
+        <domain includeSubdomains="true">192.168.8.3</domain>
+    </domain-config>
+</network-security-config>

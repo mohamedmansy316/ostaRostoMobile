@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+local.properties
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# Android
+*.apk
+*.aab
+*.keystore
+*.jks
+release/
+
+# Firebase config (add your own – see README)
+composeApp/google-services.json
+iosApp/iosApp/GoogleService-Info.plist
+
+# Xcode
+xcuserdata/
+*.xcworkspace/xcshareddata/
+DerivedData/
+iosApp/iosApp.xcodeproj/
+
+# macOS
+.DS_Store

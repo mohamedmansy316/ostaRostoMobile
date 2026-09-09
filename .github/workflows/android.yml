@@ -1,0 +1,37 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Ensure Gradle wrapper
+        run: gradle wrapper --gradle-version 8.11.1
+
+      - name: Common unit tests (mock-engine repositories)
+        run: ./gradlew :composeApp:testDebugUnitTest --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew :composeApp:assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: composeApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn

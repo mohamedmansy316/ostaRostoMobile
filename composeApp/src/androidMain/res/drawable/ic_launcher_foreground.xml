@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive-icon foreground: the Osta Rosto badge, inset to sit inside the
+     72dp safe zone of the 108dp adaptive canvas. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_launcher_badge"
+    android:inset="16%" />
