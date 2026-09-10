@@ -2,7 +2,6 @@ package com.ostarosto.app.core.designsystem
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -72,8 +71,8 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * App theme. Forces RTL for the whole tree — the app is Arabic-only.
- * TODO: bundle GE SS Two / Noto Sans Arabic and wire it into [Typography].
+ * App theme. Forces RTL for the whole tree — the app is Arabic-only — and uses
+ * the bundled Cairo type scale (see [ostaTypography]).
  */
 @Composable
 fun OstaRostoTheme(
@@ -82,7 +81,7 @@ fun OstaRostoTheme(
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = Typography(),
+        typography = ostaTypography(),
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             content()

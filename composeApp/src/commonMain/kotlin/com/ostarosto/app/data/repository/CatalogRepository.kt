@@ -47,6 +47,28 @@ class CatalogRepository(private val api: ApiClient) {
         ),
     ).map { list -> list.map { it.toDomain() } }
 
+    /**
+     * Pulls the branch's whole active catalogue in as few requests as possible.
+     * The menu holds this list in memory and filters categories client-side, so
+     * switching category tabs is instant and never hits the network again.
+     */
+    suspend fun allProducts(branchId: String? = null): ApiResult<List<Product>> {
+        val acc = mutableListOf<Product>()
+        var page = 1
+        while (page <= MAX_CATALOG_PAGES) {
+            when (val res = products(branchId = branchId, page = page, perPage = CATALOG_PAGE_SIZE)) {
+                is ApiResult.Success -> {
+                    acc += res.value
+                    if (res.value.size < CATALOG_PAGE_SIZE) return ApiResult.Success(acc)
+                    page++
+                }
+                is ApiResult.HttpError -> return res
+                is ApiResult.NetworkError -> return res
+            }
+        }
+        return ApiResult.Success(acc)
+    }
+
     suspend fun product(ref: String, branchId: String? = null): ApiResult<Product> =
         api.get("products/$ref", ProductDto.serializer(), query = mapOf("branch_id" to branchId))
             .map { it.toDomain() }
@@ -58,4 +80,12 @@ class CatalogRepository(private val api: ApiClient) {
     suspend fun combo(ref: String, branchId: String? = null): ApiResult<Combo> =
         api.get("combos/$ref", ComboDto.serializer(), query = mapOf("branch_id" to branchId))
             .map { it.toDomain() }
+
+    private companion object {
+        /** Big enough to bring a typical branch menu back in one request. */
+        const val CATALOG_PAGE_SIZE = 200
+
+        /** Safety cap so a runaway paginator can't loop forever. */
+        const val MAX_CATALOG_PAGES = 15
+    }
 }

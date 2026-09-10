@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Osta Rosto brand maroon (logo cls-1). -->
-    <color name="ic_launcher_background">#84153A</color>
+    <!-- Light canvas so the maroon "أسطى روستو" wordmark reads (matches the
+         white background the logo is presented on at ostarosto.com). -->
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

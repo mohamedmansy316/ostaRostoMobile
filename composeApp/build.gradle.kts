@@ -154,22 +154,30 @@ buildkonfig {
     }
 }
 
-// A release build must target production over HTTPS — never ship the dev host.
+// A release *artifact* build must target production over HTTPS — never ship the
+// dev host. Only the tasks that actually produce a shippable APK/AAB trip this;
+// debug builds, IDE sync, lint, and `compileReleaseKotlin*` are unaffected.
+// To build a local release APK anyway: -Pbuildkonfig.flavor=prod -PPROD_BASE_URL=https://…
 gradle.taskGraph.whenReady {
+    val releaseArtifactTasks = setOf("assembleRelease", "bundleRelease", "packageRelease")
     val buildingRelease = allTasks.any { t ->
-        t.project == project && (t.name.endsWith("Release") || t.name.contains("Release"))
+        t.project == project && t.name in releaseArtifactTasks
     }
     if (buildingRelease) {
         val flavor = (project.findProperty("buildkonfig.flavor") as? String).orEmpty()
-        require(flavor == "prod") {
-            "Release builds must pass -Pbuildkonfig.flavor=prod (got '${flavor.ifEmpty { "dev (default)" }}'). " +
-                "The default flavor points at a plaintext-HTTP dev host."
+        val problems = buildList {
+            if (flavor != "prod") {
+                add("flavor is '${flavor.ifEmpty { "dev (default)" }}', not 'prod' (dev points at a plaintext-HTTP host)")
+            }
+            if (prodBaseUrl.contains("TODO")) add("PROD_BASE_URL is not set")
+            if (!prodBaseUrl.startsWith("https://")) add("PROD_BASE_URL is not https:// ('$prodBaseUrl')")
         }
-        require(!prodBaseUrl.contains("TODO")) {
-            "Set the production API URL: -PPROD_BASE_URL=https://... or edit prodBaseUrl in composeApp/build.gradle.kts."
-        }
-        require(prodBaseUrl.startsWith("https://")) {
-            "Production BASE_URL must be https:// (got '$prodBaseUrl')."
+        if (problems.isNotEmpty()) {
+            val msg = "Release artifact build with a non-production config:\n  - " + problems.joinToString("\n  - ") +
+                "\n  Fix: -Pbuildkonfig.flavor=prod -PPROD_BASE_URL=https://…"
+            // Hard-fail in CI (where real artifacts ship); warn locally so dev builds aren't blocked.
+            val strict = System.getenv("CI") != null || project.findProperty("release.strict") == "true"
+            if (strict) error(msg) else logger.warn("\n⚠️  $msg\n")
         }
     }
 }

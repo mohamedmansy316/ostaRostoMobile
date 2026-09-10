@@ -19,32 +19,34 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,7 +54,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +77,7 @@ import com.ostarosto.app.core.designsystem.ErrorBox
 import com.ostarosto.app.core.designsystem.OstaColors
 import com.ostarosto.app.core.designsystem.money
 import com.ostarosto.app.core.l10n.Ar
+import com.ostarosto.app.domain.model.Branch
 import com.ostarosto.app.domain.model.Category
 import com.ostarosto.app.domain.model.Product
 import org.koin.compose.viewmodel.koinViewModel
@@ -92,14 +94,9 @@ fun MenuScreen(
     var branchSheet by remember { mutableStateOf(false) }
 
     val gridState = rememberLazyGridState()
-    val nearEnd by remember {
-        derivedStateOf {
-            val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                ?: return@derivedStateOf false
-            last >= gridState.layoutInfo.totalItemsCount - 4
-        }
-    }
-    LaunchedEffect(nearEnd) { if (nearEnd) viewModel.loadMore() }
+    // Category is now a pure client-side filter — snap back to the top when the
+    // tab or search changes so it reads like a toggle, not a scrolled list.
+    LaunchedEffect(state.selectedCategoryId, state.search) { gridState.scrollToItem(0) }
 
     Scaffold(
         topBar = {
@@ -146,17 +143,20 @@ fun MenuScreen(
                 }
             }
 
-            if (state.loadingProducts && state.products.isNotEmpty()) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            }
-
-            when {
-                state.loadingShell || (state.loadingProducts && state.products.isEmpty()) -> SkeletonList()
-                state.error != null && state.products.isEmpty() -> ErrorBox(state.error!!, onRetry = viewModel::load)
-                state.products.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(Ar.noProducts, style = MaterialTheme.typography.bodyLarge)
+            PullToRefreshBox(
+                isRefreshing = state.refreshing,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                val products = state.products
+                when {
+                    state.loadingShell || (state.loadingCatalog && state.allProducts.isEmpty()) -> SkeletonList()
+                    state.error != null && state.allProducts.isEmpty() -> ErrorBox(state.error!!, onRetry = viewModel::load)
+                    products.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(Ar.noProducts, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    else -> ProductGrid(products, gridState, onProduct)
                 }
-                else -> ProductGrid(state.products, gridState, state.loadingMore, onProduct)
             }
         }
     }
@@ -166,33 +166,120 @@ fun MenuScreen(
             onDismissRequest = { branchSheet = false },
             sheetState = rememberModalBottomSheetState(),
         ) {
-            Text(
-                Ar.chooseBranch,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(16.dp),
-            )
-            state.branches.forEach { branch ->
-                TextButton(
-                    onClick = {
-                        viewModel.selectBranch(branch)
-                        branchSheet = false
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                ) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Text(branch.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            if (branch.isOpen) branch.address.orEmpty() else Ar.branchClosed,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (branch.isOpen) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.error,
-                        )
-                    }
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                Text(
+                    Ar.chooseBranch,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = OstaColors.Ink,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    Ar.currentBranch + ": " + (state.selectedBranch?.name ?: "—"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(state.branches, key = { it.id }) { branch ->
+                    BranchRow(
+                        branch = branch,
+                        selected = state.selectedBranch?.id == branch.id,
+                        onClick = {
+                            viewModel.selectBranch(branch)
+                            branchSheet = false
+                        },
+                    )
                 }
             }
-            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/** One selectable branch: location badge, name + address, open/closed status, tick when active. */
+@Composable
+private fun BranchRow(branch: Branch, selected: Boolean, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) OstaColors.MaroonTint else MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 0.dp else 1.dp),
+        border = if (selected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier.size(42.dp)
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary else OstaColors.MaroonTint,
+                        CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = if (selected) Color.White else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    branch.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = OstaColors.Ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!branch.address.isNullOrBlank()) {
+                    Text(
+                        branch.address!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(
+                        Modifier.size(7.dp).background(
+                            if (branch.isOpen) OstaColors.Success else MaterialTheme.colorScheme.error,
+                            CircleShape,
+                        ),
+                    )
+                    val hours = branch.hoursToday
+                        ?.takeIf { branch.isOpen && !it.from.isNullOrBlank() && !it.to.isNullOrBlank() }
+                        ?.let { "${it.from} - ${it.to}" }
+                    Text(
+                        hours ?: if (branch.isOpen) Ar.openNow else Ar.closedNow,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (branch.isOpen) OstaColors.Success else MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+
+            if (selected) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = Ar.currentBranch,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
@@ -245,7 +332,6 @@ private fun CategoryCard(category: Category, selected: Boolean, onClick: () -> U
 private fun ProductGrid(
     products: List<Product>,
     gridState: LazyGridState,
-    loadingMore: Boolean,
     onProduct: (String) -> Unit,
 ) {
     LazyVerticalGrid(
@@ -259,13 +345,6 @@ private fun ProductGrid(
     ) {
         gridItems(products, key = { it.id }) { product ->
             ProductCard(product, onClick = { onProduct(product.foodicsId ?: product.id.toString()) })
-        }
-        if (loadingMore) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(24.dp))
-                }
-            }
         }
     }
 }

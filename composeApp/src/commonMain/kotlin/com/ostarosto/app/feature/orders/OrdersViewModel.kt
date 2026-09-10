@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 data class OrdersUiState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false,
     val orders: List<Order> = emptyList(),
     val selected: Order? = null,
     val error: String? = null,
@@ -23,13 +24,15 @@ class OrdersViewModel(private val repo: OrderRepository) : ViewModel() {
     private val _state = MutableStateFlow(OrdersUiState())
     val state: StateFlow<OrdersUiState> = _state.asStateFlow()
 
-    fun refresh() {
-        _state.update { it.copy(loading = true, error = null) }
+    /** @param pull true when triggered by pull-to-refresh (keep the list visible). */
+    fun refresh(pull: Boolean = false) {
+        if (_state.value.refreshing) return
+        _state.update { if (pull) it.copy(refreshing = true, error = null) else it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val r = repo.list()) {
-                is ApiResult.Success -> _state.update { it.copy(loading = false, orders = r.value) }
-                is ApiResult.HttpError -> _state.update { it.copy(loading = false, error = r.message) }
-                is ApiResult.NetworkError -> _state.update { it.copy(loading = false, error = r.cause.message) }
+                is ApiResult.Success -> _state.update { it.copy(loading = false, refreshing = false, orders = r.value) }
+                is ApiResult.HttpError -> _state.update { it.copy(loading = false, refreshing = false, error = r.message) }
+                is ApiResult.NetworkError -> _state.update { it.copy(loading = false, refreshing = false, error = r.cause.message) }
             }
         }
     }

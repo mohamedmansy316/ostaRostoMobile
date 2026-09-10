@@ -1,22 +1,27 @@
 [versions]
-agp = "8.7.3"
-kotlin = "2.1.0"
-compose-multiplatform = "1.7.3"
-androidx-activityCompose = "1.9.3"
-androidx-lifecycle = "2.8.4"
+# Toolchain bumped for Gradle-9 forward-compatibility (clears plugin-side
+# deprecation warnings). AGP 8.9.x is tested against Gradle 8.11.1-8.13;
+# Kotlin 2.1.20 <-> Compose Multiplatform 1.8.0 is a JetBrains-tested pair.
+agp = "8.9.1"
+kotlin = "2.1.20"
+compose-multiplatform = "1.8.0"
+androidx-activityCompose = "1.10.1"
+# Compose MP 1.8.0 companion libraries.
+androidx-lifecycle = "2.9.0"
 # TODO(stability): alpha nav in production. Bump to the latest stable
 # org.jetbrains.androidx.navigation release and re-test the graph + deep links.
-navigation-compose = "2.8.0-alpha10"
-ktor = "3.0.3"
-kotlinx-coroutines = "1.9.0"
-kotlinx-serialization = "1.7.3"
-kotlinx-datetime = "0.6.1"
-koin = "4.0.0"
-koin-compose = "4.0.0"
-coil = "3.0.4"
-multiplatform-settings = "1.2.0"
+# 2.8.0-alpha13 is the companion for Compose MP 1.8.0.
+navigation-compose = "2.8.0-alpha13"
+ktor = "3.1.1"
+kotlinx-coroutines = "1.10.1"
+kotlinx-serialization = "1.8.0"
+kotlinx-datetime = "0.6.2"
+koin = "4.0.4"
+koin-compose = "4.0.4"
+coil = "3.1.0"
+multiplatform-settings = "1.3.0"
 napier = "2.7.1"
-buildkonfig = "0.15.2"
+buildkonfig = "0.17.1"
 firebase-bom = "33.7.0"
 google-services = "4.4.2"
 android-minSdk = "26"

@@ -2,17 +2,23 @@ package com.ostarosto.app
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +44,7 @@ import com.ostarosto.app.core.auth.AuthState
 import com.ostarosto.app.core.auth.SessionManager
 import com.ostarosto.app.core.designsystem.OstaRostoLogo
 import com.ostarosto.app.core.designsystem.OstaRostoTheme
+import com.ostarosto.app.core.designsystem.money
 import com.ostarosto.app.core.l10n.Ar
 import com.ostarosto.app.core.network.ApiResult
 import com.ostarosto.app.core.state.SelectionStore
@@ -124,14 +131,43 @@ private fun MainGraph(onLogout: () -> Unit) {
             if (showCartBar) {
                 Button(
                     onClick = { nav.navigate(Route.Cart) { launchSingleTop = true } },
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
-                        .height(52.dp),
+                        .height(56.dp),
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (cart.itemCount > 0) "${Ar.cart} (${cart.itemCount})" else Ar.cart)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 1 — how many items are in the cart
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "${cart.itemCount} ${Ar.items}",
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                        // 2 — running total
+                        Text(
+                            money(cart.subtotal),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        // 3 — proceed affordance (auto-mirrored for RTL)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = Ar.viewCart,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         },
