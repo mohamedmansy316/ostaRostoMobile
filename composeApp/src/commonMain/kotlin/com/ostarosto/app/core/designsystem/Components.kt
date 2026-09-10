@@ -38,10 +38,14 @@ import com.ostarosto.app.domain.model.OrderProgress
 import kotlin.math.round
 
 fun money(amount: Double): String {
-    val rounded = round(amount * 100) / 100.0
+    val negative = amount < 0
+    val abs = kotlin.math.abs(amount)
+    val rounded = round(abs * 100) / 100.0
     val whole = rounded.toLong()
     val cents = round((rounded - whole) * 100).toInt()
-    return if (cents == 0) "$whole ${Ar.currency}" else "$whole.${cents.toString().padStart(2, '0')} ${Ar.currency}"
+    val sign = if (negative && rounded != 0.0) "-" else ""
+    val number = if (cents == 0) "$whole" else "$whole.${cents.toString().padStart(2, '0')}"
+    return "$sign$number ${Ar.currency}"
 }
 
 @Composable

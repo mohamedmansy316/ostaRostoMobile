@@ -56,6 +56,7 @@ object Ar {
     const val iHavePaid = "لقد أتممت الدفع"
     const val reopenPayment = "إعادة فتح صفحة الدفع"
     const val paymentFailed = "فشلت عملية الدفع"
+    const val couldNotOpenPayment = "تعذّر فتح صفحة الدفع. تأكد من وجود متصفح ثم حاول مجدداً."
     const val backToCart = "العودة إلى السلة"
 
     // Profile / tabs

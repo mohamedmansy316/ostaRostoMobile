@@ -59,9 +59,14 @@ fun CheckoutScreen(
         val url = state.paymentUrl
         val ref = state.paymentReference
         if (url != null && ref != null) {
-            urlOpener.open(url)
-            onPaymentRequired(ref)
-            viewModel.consumePaymentRedirect()
+            if (urlOpener.open(url)) {
+                onPaymentRequired(ref)
+                viewModel.consumePaymentRedirect()
+            } else {
+                // Order is already placed; keep the user here with a way to retry
+                // opening the payment page instead of stranding them.
+                viewModel.reportCheckoutError(Ar.couldNotOpenPayment)
+            }
         }
     }
 
@@ -84,12 +89,30 @@ fun CheckoutScreen(
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(4.dp))
                 }
-                PrimaryButton(
-                    text = Ar.placeOrder,
-                    onClick = viewModel::placeOrder,
-                    enabled = state.canPlace,
-                    loading = state.placing,
-                )
+                val pendingPaymentUrl = state.paymentUrl
+                val pendingPaymentRef = state.paymentReference
+                if (pendingPaymentUrl != null) {
+                    // The order is placed but the browser could not be opened —
+                    // offer a retry rather than re-submitting the order.
+                    PrimaryButton(
+                        text = Ar.reopenPayment,
+                        onClick = {
+                            if (urlOpener.open(pendingPaymentUrl)) {
+                                pendingPaymentRef?.let(onPaymentRequired)
+                                viewModel.consumePaymentRedirect()
+                            } else {
+                                viewModel.reportCheckoutError(Ar.couldNotOpenPayment)
+                            }
+                        },
+                    )
+                } else {
+                    PrimaryButton(
+                        text = Ar.placeOrder,
+                        onClick = viewModel::placeOrder,
+                        enabled = state.canPlace,
+                        loading = state.placing,
+                    )
+                }
             }
         },
     ) { padding ->

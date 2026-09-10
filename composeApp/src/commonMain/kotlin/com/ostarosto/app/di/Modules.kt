@@ -31,7 +31,7 @@ val coreModule: Module = module {
     single { TokenStore(get()) }
     single { SessionManager(get()) }
     single { HttpClientFactory.create(get()) }
-    single { ApiClient(get()) }
+    single { ApiClient(get(), onUnauthorized = get<SessionManager>()::onSignedOut) }
 }
 
 val dataModule: Module = module {

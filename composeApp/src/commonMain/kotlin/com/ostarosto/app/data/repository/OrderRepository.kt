@@ -21,12 +21,23 @@ class OrderRepository(private val api: ApiClient) {
         api.get("orders/$id", OrderDto.serializer()).map { it.toDomain() }
 
     suspend fun place(body: PlaceOrderBody): ApiResult<PlaceOrderOutcome> =
-        api.post("orders", PlaceOrderResponseDto.serializer(), body).map { dto ->
-            if (dto.requiresPayment && dto.paymentUrl != null && dto.reference != null) {
-                PlaceOrderOutcome.PaymentRequired(dto.paymentUrl, dto.reference)
-            } else {
-                PlaceOrderOutcome.Placed(dto.order!!.toDomain())
+        when (val r = api.post("orders", PlaceOrderResponseDto.serializer(), body)) {
+            is ApiResult.Success -> {
+                val dto = r.value
+                when {
+                    dto.requiresPayment && dto.paymentUrl != null && dto.reference != null ->
+                        ApiResult.Success(PlaceOrderOutcome.PaymentRequired(dto.paymentUrl, dto.reference))
+
+                    dto.order != null ->
+                        ApiResult.Success(PlaceOrderOutcome.Placed(dto.order.toDomain()))
+
+                    // Server said no payment needed but sent no order — treat as a
+                    // failed response rather than crashing on a null assertion.
+                    else -> ApiResult.HttpError(200, "Malformed order response")
+                }
             }
+            is ApiResult.HttpError -> r
+            is ApiResult.NetworkError -> r
         }
 
     suspend fun cancel(id: Long): ApiResult<Order> =

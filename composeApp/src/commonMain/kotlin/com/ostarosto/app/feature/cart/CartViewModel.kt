@@ -147,6 +147,8 @@ class CartViewModel(
 
     fun consumePaymentRedirect() = _checkout.update { it.copy(paymentUrl = null, paymentReference = null) }
 
+    fun reportCheckoutError(message: String) = _checkout.update { it.copy(error = message) }
+
     private fun productLines(): List<CartLineBody> = store.cart.value.lines
         .filterNot { it.isCombo }
         .map { line ->

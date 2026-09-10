@@ -109,7 +109,9 @@ android {
             isDebuggable = true
         }
         release {
-            isMinifyEnabled = false
+            // R8 enabled — see composeApp/proguard-rules.pro. Smoke-test a real
+            // release build before shipping and add keeps for anything stripped.
+            isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -128,7 +130,11 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
-// Base URLs per build. Override PROD_BASE_URL once the production domain exists.
+// Base URLs per build. Pass -PPROD_BASE_URL=https://api.example.com/api/v1 (or
+// edit the fallback below) before building the prod flavor.
+val prodBaseUrl: String =
+    (project.findProperty("PROD_BASE_URL") as? String) ?: "https://TODO-set-production-domain/api/v1"
+
 buildkonfig {
     packageName = "com.ostarosto.app.config"
 
@@ -143,7 +149,27 @@ buildkonfig {
 
     // `./gradlew ... -Pbuildkonfig.flavor=prod` to build against production.
     defaultConfigs("prod") {
-        buildConfigField(STRING, "BASE_URL", "https://TODO-set-production-domain/api/v1")
+        buildConfigField(STRING, "BASE_URL", prodBaseUrl)
         buildConfigField(STRING, "ENV", "prod")
+    }
+}
+
+// A release build must target production over HTTPS — never ship the dev host.
+gradle.taskGraph.whenReady {
+    val buildingRelease = allTasks.any { t ->
+        t.project == project && (t.name.endsWith("Release") || t.name.contains("Release"))
+    }
+    if (buildingRelease) {
+        val flavor = (project.findProperty("buildkonfig.flavor") as? String).orEmpty()
+        require(flavor == "prod") {
+            "Release builds must pass -Pbuildkonfig.flavor=prod (got '${flavor.ifEmpty { "dev (default)" }}'). " +
+                "The default flavor points at a plaintext-HTTP dev host."
+        }
+        require(!prodBaseUrl.contains("TODO")) {
+            "Set the production API URL: -PPROD_BASE_URL=https://... or edit prodBaseUrl in composeApp/build.gradle.kts."
+        }
+        require(prodBaseUrl.startsWith("https://")) {
+            "Production BASE_URL must be https:// (got '$prodBaseUrl')."
+        }
     }
 }

@@ -20,6 +20,8 @@ import kotlinx.serialization.json.JsonNull
 class ApiClient(
     val http: HttpClient,
     private val json: Json = HttpClientFactory.json,
+    /** Invoked whenever the server answers 401 — wired to clear the session. */
+    private val onUnauthorized: () -> Unit = {},
 ) {
 
     suspend fun <T> get(
@@ -94,17 +96,26 @@ class ApiClient(
         body: Any?,
         query: Map<String, Any?>,
     ): Exchange {
-        val response = try {
-            http.request(path) {
+        val response: HttpResponse
+        val text: String
+        try {
+            response = http.request(path) {
                 this.method = method
                 query.forEach { (key, value) -> if (value != null) parameter(key, value) }
                 if (body != null) setBody(body)
             }
+            // Reading the body can also fail (connection reset, read timeout,
+            // charset) — keep it inside the same guard so it becomes a
+            // NetworkError instead of an uncaught crash.
+            text = response.bodyAsText()
+        } catch (c: kotlinx.coroutines.CancellationException) {
+            throw c
         } catch (t: Throwable) {
             return Exchange.Failed(t)
         }
 
-        val text = response.bodyAsText()
+        if (response.status.value == 401) onUnauthorized()
+
         val envelope = runCatching { json.decodeFromString(RawEnvelope.serializer(), text) }
             .getOrDefault(RawEnvelope(success = response.status.isSuccess()))
         return Exchange.Ok(response, envelope)

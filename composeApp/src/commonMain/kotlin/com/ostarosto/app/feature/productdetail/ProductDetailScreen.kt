@@ -2,6 +2,7 @@ package com.ostarosto.app.feature.productdetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -110,15 +111,38 @@ private fun ProductContent(
 ) {
     val unsatisfied = state.unsatisfied(product)
 
+    val discountPercent = product.originalPrice
+        ?.takeIf { product.hasDiscount && it > product.price }
+        ?.let { (((it - product.price) / it) * 100).toInt() }
+        ?.takeIf { it > 0 }
+
     Column(
         Modifier.fillMaxSize().padding(contentPadding).verticalScroll(rememberScrollState()),
     ) {
-        AsyncImage(
-            model = product.image,
-            contentDescription = product.name,
-            modifier = Modifier.fillMaxWidth().height(220.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        )
+        Box(Modifier.fillMaxWidth().height(220.dp)) {
+            AsyncImage(
+                model = product.image,
+                contentDescription = product.name,
+                modifier = Modifier.fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
+            if (discountPercent != null) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    shadowElevation = 1.dp,
+                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+                ) {
+                    Text(
+                        "-$discountPercent%",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
 
         Column(Modifier.padding(16.dp)) {
             Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -131,12 +155,37 @@ private fun ProductContent(
                 )
             }
             Spacer(Modifier.height(10.dp))
-            Text(
-                money(product.price),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    money(product.price),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                if (discountPercent != null && product.originalPrice != null) {
+                    Text(
+                        money(product.originalPrice),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textDecoration = TextDecoration.LineThrough,
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                    ) {
+                        Text(
+                            "-$discountPercent%",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+            }
 
             if (state.showErrors && unsatisfied.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))

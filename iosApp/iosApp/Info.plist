@@ -31,10 +31,26 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<!--
+	  ATS stays ON. Local dev servers (192.168.x.x / localhost) are reached via
+	  NSAllowsLocalNetworking; the .test dev domain has an explicit cleartext
+	  exception. Production HTTPS gets full ATS enforcement.
+	  TODO: move these exceptions into a Debug-only Info.plist / xcconfig.
+	-->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>osta-rosto-2.test</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<key>UIBackgroundModes</key>
 	<array>

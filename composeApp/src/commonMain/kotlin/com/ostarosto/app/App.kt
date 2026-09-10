@@ -2,20 +2,17 @@ package com.ostarosto.app
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,7 +21,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -34,7 +30,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.navDeepLink
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
@@ -58,6 +53,7 @@ import com.ostarosto.app.feature.orders.OrdersScreen
 import com.ostarosto.app.feature.payment.PaymentWaitingScreen
 import com.ostarosto.app.feature.productdetail.ProductDetailScreen
 import com.ostarosto.app.feature.profile.ProfileScreen
+import com.ostarosto.app.navigation.DeepLinkBus
 import com.ostarosto.app.navigation.Route
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
@@ -93,14 +89,6 @@ fun App() {
     }
 }
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
-
-private val bottomTabs = listOf(
-    Tab(Route.Menu, Ar.menu, Icons.Default.RestaurantMenu),
-    Tab(Route.Cart, Ar.cart, Icons.Default.ShoppingCart),
-    Tab(Route.Profile, Ar.profile, Icons.Default.Person),
-)
-
 private fun NavHostController.switchTab(route: String) {
     navigate(route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
@@ -117,28 +105,33 @@ private fun MainGraph(onLogout: () -> Unit) {
     val cart by cartStore.cart.collectAsState()
 
     val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
-    val showTabs = bottomTabs.any { it.route == currentRoute }
+    val showCartBar = currentRoute == Route.Menu || currentRoute == Route.Profile
+
+    // Deep links (ostarosto://order/{id}) — cold start and warm start both land here.
+    LaunchedEffect(Unit) {
+        DeepLinkBus.uri.collect { uri ->
+            if (uri != null) {
+                DeepLinkBus.orderIdOf(uri)?.let { id ->
+                    nav.navigate(Route.orderDetail(id)) { launchSingleTop = true }
+                }
+                DeepLinkBus.consume()
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
-            if (showTabs) {
-                NavigationBar {
-                    bottomTabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = { nav.switchTab(tab.route) },
-                            icon = {
-                                if (tab.route == Route.Cart && cart.itemCount > 0) {
-                                    BadgedBox(badge = { Badge { Text("${cart.itemCount}") } }) {
-                                        Icon(tab.icon, contentDescription = tab.label)
-                                    }
-                                } else {
-                                    Icon(tab.icon, contentDescription = tab.label)
-                                }
-                            },
-                            label = { Text(tab.label) },
-                        )
-                    }
+            if (showCartBar) {
+                Button(
+                    onClick = { nav.navigate(Route.Cart) { launchSingleTop = true } },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(52.dp),
+                ) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (cart.itemCount > 0) "${Ar.cart} (${cart.itemCount})" else Ar.cart)
                 }
             }
         },
@@ -152,6 +145,7 @@ private fun MainGraph(onLogout: () -> Unit) {
                 MenuScreen(
                     onProduct = { ref -> nav.navigate(Route.productDetail(ref)) },
                     onOrders = { nav.navigate(Route.Orders) },
+                    onProfile = { nav.navigate(Route.Profile) },
                 )
             }
 
@@ -231,7 +225,6 @@ private fun MainGraph(onLogout: () -> Unit) {
             composable(
                 Route.OrderDetail,
                 arguments = listOf(navArgument("orderId") { type = NavType.LongType }),
-                deepLinks = listOf(navDeepLink { uriPattern = "ostarosto://order/{orderId}" }),
             ) { entry ->
                 OrderDetailScreen(
                     orderId = entry.arguments?.getLong("orderId") ?: 0L,
