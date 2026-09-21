@@ -65,6 +65,7 @@ kotlin {
 
             implementation(libs.multiplatform.settings)
             implementation(libs.napier)
+            implementation(libs.webview.multiplatform)
         }
 
         commonTest.dependencies {
@@ -81,6 +82,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.browser)
             implementation(libs.androidx.security.crypto)
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.messaging)
@@ -143,7 +145,7 @@ buildkonfig {
         // same network and the host must run:
         //   php artisan serve --host=0.0.0.0 --port=8000
         // Android emulator (AVD) instead: use http://10.0.2.2:8000/api/v1
-        buildConfigField(STRING, "BASE_URL", "http://192.168.8.3:8000/api/v1")
+        buildConfigField(STRING, "BASE_URL", "https://ostarosto.com/api/v1")
         buildConfigField(STRING, "ENV", "dev")
     }
 

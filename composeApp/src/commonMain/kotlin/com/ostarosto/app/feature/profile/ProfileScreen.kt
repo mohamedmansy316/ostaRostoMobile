@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ostarosto.app.core.auth.AuthState
@@ -55,6 +56,7 @@ fun ProfileScreen(
         Column(
             Modifier.fillMaxSize().padding(padding).padding(16.dp),
         ) {
+            val displayName = customer?.name?.takeIf { it.isNotBlank() && it != "Customer" }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = CircleShape,
@@ -62,24 +64,33 @@ fun ProfileScreen(
                     modifier = Modifier.size(56.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                        if (displayName != null) {
+                            Text(
+                                displayName.trim().first().uppercaseChar().toString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.size(14.dp))
                 Column {
                     Text(
-                        customer?.name?.takeIf { it.isNotBlank() && it != "Customer" } ?: Ar.profile,
+                        displayName ?: Ar.profile,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
                     customer?.let {
                         Text(
                             "+${it.dialCode} ${it.phone}",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

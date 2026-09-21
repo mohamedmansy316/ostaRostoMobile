@@ -14,6 +14,7 @@ object Route {
     const val ProductDetail = "product/{productRef}"
     const val Cart = "cart"
     const val Checkout = "checkout"
+    const val LocationPicker = "location-picker"
     const val PaymentWaiting = "payment/{reference}"
     const val OrderConfirmation = "order-confirmation/{orderId}"
     const val Orders = "orders"

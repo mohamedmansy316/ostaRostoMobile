@@ -56,6 +56,8 @@ data class Product(
     val categoryId: Long?,
     val nutrition: NutritionFacts,
     val modifiers: List<Modifier> = emptyList(),
+    /** True if the product has modifiers to configure, even on endpoints that omit the full list. */
+    val hasModifiers: Boolean = modifiers.isNotEmpty(),
 )
 
 data class Modifier(
@@ -90,9 +92,40 @@ data class Combo(
     val nutrition: NutritionFacts,
 )
 
+data class HeroSlide(
+    val id: Long,
+    val title: String?,
+    val description: String?,
+    val badgeText: String?,
+    val imageUrl: String?,
+    val videoUrl: String?,
+    val orderOnlineLink: String?,
+    val sortOrder: Int,
+)
+
+data class PromotionalBanner(
+    val id: Long,
+    val title: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+    val backgroundColor: String?,
+    val textColor: String?,
+    val discountText: String?,
+    val dealText: String?,
+    val linkUrl: String?,
+    val sortOrder: Int,
+)
+
 data class PaymentMethod(
     val id: String,
     val name: String,
     val code: String?,
     val isPaymob: Boolean,
+    val isWalletEnabled: Boolean = false,
 )
+
+/** Which Paymob channel to route a Paymob payment method through. */
+enum class PaymentChannel(val apiValue: String) {
+    Card("card"),
+    Wallet("wallet"),
+}

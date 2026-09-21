@@ -12,8 +12,10 @@ import com.ostarosto.app.data.repository.CartRepository
 import com.ostarosto.app.data.repository.OrderRepository
 import com.ostarosto.app.domain.model.Cart
 import com.ostarosto.app.domain.model.CartTotals
+import com.ostarosto.app.domain.model.DeliveryAvailability
 import com.ostarosto.app.domain.model.Order
 import com.ostarosto.app.domain.model.OrderType
+import com.ostarosto.app.domain.model.PaymentChannel
 import com.ostarosto.app.domain.model.PaymentMethod
 import com.ostarosto.app.domain.model.PlaceOrderOutcome
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +29,15 @@ data class CheckoutUiState(
     val branchName: String = "",
     val address: String = "",
     val notes: String = "",
+    /** Set once a map pin is confirmed on the location picker (delivery orders only). */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val zoneId: Int? = null,
+    val deliveryZoneName: String? = null,
+    val deliveryFee: Double? = null,
     val paymentMethods: List<PaymentMethod> = emptyList(),
     val selectedPaymentId: String? = null,
+    val selectedChannel: PaymentChannel = PaymentChannel.Card,
     val totals: CartTotals? = null,
     val loadingTotals: Boolean = false,
     val placing: Boolean = false,
@@ -40,7 +49,7 @@ data class CheckoutUiState(
 ) {
     val canPlace: Boolean
         get() = selectedPaymentId != null && !placing &&
-            (orderType == OrderType.Pickup || address.isNotBlank())
+            (orderType == OrderType.Pickup || (latitude != null && longitude != null))
 }
 
 class CartViewModel(
@@ -68,7 +77,22 @@ class CartViewModel(
 
     fun setAddress(value: String) = _checkout.update { it.copy(address = value) }
     fun setNotes(value: String) = _checkout.update { it.copy(notes = value) }
-    fun selectPayment(id: String) = _checkout.update { it.copy(selectedPaymentId = id) }
+    fun selectPayment(id: String, channel: PaymentChannel = PaymentChannel.Card) =
+        _checkout.update { it.copy(selectedPaymentId = id, selectedChannel = channel) }
+
+    /** Called when the location picker confirms an available map pin. */
+    fun setLocation(latitude: Double, longitude: Double, availability: DeliveryAvailability) {
+        _checkout.update {
+            it.copy(
+                latitude = latitude,
+                longitude = longitude,
+                zoneId = availability.zoneId,
+                deliveryZoneName = availability.zoneName,
+                deliveryFee = availability.deliveryFee,
+            )
+        }
+        refreshTotals()
+    }
 
     /** Called when the checkout screen opens. */
     fun prepareCheckout() {
@@ -89,13 +113,18 @@ class CartViewModel(
 
     fun refreshTotals() {
         val ref = branchRef ?: return
+        val s = _checkout.value
         _checkout.update { it.copy(loadingTotals = true) }
         viewModelScope.launch {
+            val isDelivery = s.orderType == OrderType.Delivery
             val body = CartTotalsBody(
                 branchId = ref,
-                type = _checkout.value.orderType.apiValue,
+                type = s.orderType.apiValue,
                 products = productLines(),
                 combos = comboLines(),
+                deliveryFee = if (isDelivery) s.deliveryFee else null,
+                latitude = if (isDelivery) s.latitude else null,
+                longitude = if (isDelivery) s.longitude else null,
             )
             when (val r = cartRepo.totals(body)) {
                 is ApiResult.Success -> _checkout.update { it.copy(loadingTotals = false, totals = r.value, error = null) }
@@ -111,14 +140,20 @@ class CartViewModel(
         val paymentId = s.selectedPaymentId ?: return
         _checkout.update { it.copy(placing = true, error = null) }
         viewModelScope.launch {
+            val isDelivery = s.orderType == OrderType.Delivery
             val body = PlaceOrderBody(
                 type = s.orderType.apiValue,
                 branchId = ref,
                 paymentMethodId = paymentId,
+                paymentChannel = s.selectedChannel.apiValue,
                 products = productLines(),
                 combos = comboLines(),
                 customerNotes = s.notes.ifBlank { null },
-                address = if (s.orderType == OrderType.Delivery) s.address.ifBlank { null } else null,
+                address = if (isDelivery) s.address.ifBlank { null } else null,
+                latitude = if (isDelivery) s.latitude else null,
+                longitude = if (isDelivery) s.longitude else null,
+                zoneId = if (isDelivery) s.zoneId else null,
+                deliveryFee = if (isDelivery) s.deliveryFee else null,
             )
             when (val r = orderRepo.place(body)) {
                 is ApiResult.Success -> when (val outcome = r.value) {

@@ -74,6 +74,7 @@ data class PlaceOrderBody(
     val type: Int,
     @SerialName("branch_id") val branchId: String,
     @SerialName("payment_method_id") val paymentMethodId: String,
+    @SerialName("payment_channel") val paymentChannel: String? = null,
     val products: List<CartLineBody> = emptyList(),
     val combos: List<CartLineBody> = emptyList(),
     @SerialName("coupon_code") val couponCode: String? = null,

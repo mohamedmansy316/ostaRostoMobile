@@ -8,12 +8,14 @@ import com.ostarosto.app.core.state.SelectionStore
 import com.ostarosto.app.data.repository.AuthRepository
 import com.ostarosto.app.data.repository.CartRepository
 import com.ostarosto.app.data.repository.CatalogRepository
+import com.ostarosto.app.data.repository.DeliveryRepository
 import com.ostarosto.app.data.repository.DeviceRepository
 import com.ostarosto.app.data.repository.OrderRepository
 import com.ostarosto.app.data.repository.PaymentRepository
 import com.ostarosto.app.feature.auth.AuthViewModel
 import com.ostarosto.app.feature.cart.CartStore
 import com.ostarosto.app.feature.cart.CartViewModel
+import com.ostarosto.app.feature.location.LocationPickerViewModel
 import com.ostarosto.app.feature.menu.MenuViewModel
 import com.ostarosto.app.feature.orders.OrdersViewModel
 import com.ostarosto.app.feature.payment.PaymentViewModel
@@ -43,6 +45,7 @@ val dataModule: Module = module {
     single { OrderRepository(get()) }
     single { PaymentRepository(get()) }
     single { DeviceRepository(get()) }
+    single { DeliveryRepository(get()) }
 }
 
 val viewModelModule: Module = module {
@@ -50,6 +53,7 @@ val viewModelModule: Module = module {
     viewModelOf(::MenuViewModel)
     viewModelOf(::ProductDetailViewModel)
     viewModelOf(::CartViewModel)
+    viewModelOf(::LocationPickerViewModel)
     viewModelOf(::OrdersViewModel)
     viewModelOf(::PaymentViewModel)
 }

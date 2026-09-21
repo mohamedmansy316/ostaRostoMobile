@@ -5,6 +5,8 @@ import com.ostarosto.app.domain.model.BranchHours
 import com.ostarosto.app.domain.model.Category
 import com.ostarosto.app.domain.model.Combo
 import com.ostarosto.app.domain.model.Customer
+import com.ostarosto.app.domain.model.DeliveryAvailability
+import com.ostarosto.app.domain.model.HeroSlide
 import com.ostarosto.app.domain.model.Modifier
 import com.ostarosto.app.domain.model.ModifierOption
 import com.ostarosto.app.domain.model.NutritionFacts
@@ -14,6 +16,7 @@ import com.ostarosto.app.domain.model.OrderItem
 import com.ostarosto.app.domain.model.OrderProgress
 import com.ostarosto.app.domain.model.PaymentMethod
 import com.ostarosto.app.domain.model.Product
+import com.ostarosto.app.domain.model.PromotionalBanner
 import com.ostarosto.app.domain.model.CartConflict
 import com.ostarosto.app.domain.model.CartTotals
 import com.ostarosto.app.domain.model.CartValidation
@@ -73,6 +76,7 @@ fun ProductDto.toDomain() = Product(
     categoryId = categoryId,
     nutrition = nutrition.toDomain(),
     modifiers = modifiers.map { it.toDomain() },
+    hasModifiers = hasModifiers || modifiers.isNotEmpty(),
 )
 
 fun ComboDto.toDomain() = Combo(
@@ -88,7 +92,42 @@ fun ComboDto.toDomain() = Combo(
     nutrition = nutrition.toDomain(),
 )
 
-fun PaymentMethodDto.toDomain() = PaymentMethod(id, name, code, isPaymob)
+fun HeroSlideDto.toDomain() = HeroSlide(
+    id = id,
+    title = title,
+    description = description,
+    badgeText = badgeText,
+    imageUrl = imageUrl,
+    videoUrl = videoUrl,
+    orderOnlineLink = orderOnlineLink,
+    sortOrder = sortOrder,
+)
+
+fun PromotionalBannerDto.toDomain() = PromotionalBanner(
+    id = id,
+    title = title,
+    subtitle = subtitle,
+    imageUrl = imageUrl,
+    backgroundColor = backgroundColor,
+    textColor = textColor,
+    discountText = discountText,
+    dealText = dealText,
+    linkUrl = linkUrl,
+    sortOrder = sortOrder,
+)
+
+fun PaymentMethodDto.toDomain() = PaymentMethod(id, name, code, isPaymob, isWalletEnabled)
+
+fun DeliveryCheckDto.toDomain() = DeliveryAvailability(
+    available = available,
+    zoneId = zoneId,
+    zoneName = zoneName,
+    branchId = branchId,
+    branchName = branchName,
+    deliveryFee = deliveryFee,
+    distanceKm = distanceKm,
+    estimatedTime = estimatedTime,
+)
 
 fun CartTotalsDto.toDomain() = CartTotals(subtotal, discount, tax, deliveryFee, total, currency, couponApplied)
 

@@ -6,12 +6,16 @@ import com.ostarosto.app.core.network.map
 import com.ostarosto.app.data.dto.BranchDto
 import com.ostarosto.app.data.dto.CategoryDto
 import com.ostarosto.app.data.dto.ComboDto
+import com.ostarosto.app.data.dto.HeroSlideDto
 import com.ostarosto.app.data.dto.ProductDto
+import com.ostarosto.app.data.dto.PromotionalBannerDto
 import com.ostarosto.app.data.dto.toDomain
 import com.ostarosto.app.domain.model.Branch
 import com.ostarosto.app.domain.model.Category
 import com.ostarosto.app.domain.model.Combo
+import com.ostarosto.app.domain.model.HeroSlide
 import com.ostarosto.app.domain.model.Product
+import com.ostarosto.app.domain.model.PromotionalBanner
 import kotlinx.serialization.builtins.ListSerializer
 
 class CatalogRepository(private val api: ApiClient) {
@@ -80,6 +84,13 @@ class CatalogRepository(private val api: ApiClient) {
     suspend fun combo(ref: String, branchId: String? = null): ApiResult<Combo> =
         api.get("combos/$ref", ComboDto.serializer(), query = mapOf("branch_id" to branchId))
             .map { it.toDomain() }
+
+    suspend fun heroSlides(): ApiResult<List<HeroSlide>> =
+        api.get("hero-slides", ListSerializer(HeroSlideDto.serializer())).map { list -> list.map { it.toDomain() } }
+
+    suspend fun promotionalBanners(): ApiResult<List<PromotionalBanner>> =
+        api.get("promotional-banners", ListSerializer(PromotionalBannerDto.serializer()))
+            .map { list -> list.map { it.toDomain() } }
 
     private companion object {
         /** Big enough to bring a typical branch menu back in one request. */
