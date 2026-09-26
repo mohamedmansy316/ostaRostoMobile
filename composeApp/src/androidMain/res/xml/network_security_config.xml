@@ -12,6 +12,6 @@
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">osta-rosto-2.test</domain>
         <!-- Host machine Wi-Fi LAN IP for on-device testing -->
-        <domain includeSubdomains="true">192.168.8.3</domain>
+        <domain includeSubdomains="true">192.168.100.8</domain>
     </domain-config>
 </network-security-config>

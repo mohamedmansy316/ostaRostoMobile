@@ -139,11 +139,13 @@ buildkonfig {
     packageName = "com.ostarosto.app.config"
 
     defaultConfigs {
-        // Dev API host. This machine's Wi-Fi LAN IP — the phone must be on the
-        // same network and the host must run:
-        //   php artisan serve --host=0.0.0.0 --port=8000
+        // Dev API host. USB-tethered Android device via `adb reverse tcp:8000 tcp:8000`,
+        // with the host running plain `php artisan serve` (127.0.0.1:8000).
+        // Re-run `adb reverse` after every replug / adb restart.
+        // Same-Wi-Fi device instead: use this machine's LAN IP, http://192.168.100.8:8000/api/v1
+        //   (host must then run: php artisan serve --host=0.0.0.0 --port=8000)
         // Android emulator (AVD) instead: use http://10.0.2.2:8000/api/v1
-        buildConfigField(STRING, "BASE_URL", "http://192.168.8.3:8000/api/v1")
+        buildConfigField(STRING, "BASE_URL", "https://ostarosto.com/api/v1")
         buildConfigField(STRING, "ENV", "dev")
     }
 

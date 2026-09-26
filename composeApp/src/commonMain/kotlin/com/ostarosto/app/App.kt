@@ -280,5 +280,11 @@ private fun Splash() {
     ) {
         OstaRostoLogo(modifier = Modifier.fillMaxWidth(0.6f).height(96.dp))
         CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp))
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "© ${kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.UTC).year} ostarosto.com — جميع الحقوق محفوظة",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
