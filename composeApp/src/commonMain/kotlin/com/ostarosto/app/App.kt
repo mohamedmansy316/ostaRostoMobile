@@ -1,10 +1,13 @@
 package com.ostarosto.app
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -27,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -38,6 +41,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
+import coil3.disk.DiskCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
 import com.ostarosto.app.core.auth.AuthState
@@ -47,6 +51,7 @@ import com.ostarosto.app.core.designsystem.OstaRostoTheme
 import com.ostarosto.app.core.designsystem.money
 import com.ostarosto.app.core.l10n.Ar
 import com.ostarosto.app.core.network.ApiResult
+import com.ostarosto.app.core.platform.imageCacheDirectory
 import com.ostarosto.app.core.state.SelectionStore
 import com.ostarosto.app.data.repository.AuthRepository
 import com.ostarosto.app.feature.auth.AuthFlow
@@ -54,6 +59,7 @@ import com.ostarosto.app.feature.cart.CartScreen
 import com.ostarosto.app.feature.cart.CartStore
 import com.ostarosto.app.feature.checkout.CheckoutScreen
 import com.ostarosto.app.feature.checkout.OrderConfirmationScreen
+import com.ostarosto.app.feature.location.LocationPickerScreen
 import com.ostarosto.app.feature.menu.MenuScreen
 import com.ostarosto.app.feature.orders.OrderDetailScreen
 import com.ostarosto.app.feature.orders.OrdersScreen
@@ -61,6 +67,7 @@ import com.ostarosto.app.feature.payment.PaymentWaitingScreen
 import com.ostarosto.app.feature.productdetail.ProductDetailScreen
 import com.ostarosto.app.feature.profile.ProfileScreen
 import com.ostarosto.app.navigation.DeepLinkBus
+import com.ostarosto.app.navigation.LocationPickBus
 import com.ostarosto.app.navigation.Route
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
@@ -71,6 +78,15 @@ fun App() {
         setSingletonImageLoaderFactory { context ->
             ImageLoader.Builder(context)
                 .components { add(KtorNetworkFetcherFactory()) }
+                .diskCache {
+                    // Coil's default cache dir lives under java.io.tmpdir, which isn't
+                    // writable on Android — point it at a real app-private directory so
+                    // already-downloaded product images actually persist across launches.
+                    DiskCache.Builder()
+                        .directory(imageCacheDirectory(context))
+                        .maxSizeBytes(200L * 1024 * 1024)
+                        .build()
+                }
                 .crossfade(true)
                 .build()
         }
@@ -127,6 +143,11 @@ private fun MainGraph(onLogout: () -> Unit) {
     }
 
     Scaffold(
+        // No top bar here — each screen owns its own Scaffold/TopAppBar, which
+        // already reserves the status-bar inset. Without this, this outer
+        // Scaffold reserves that same inset a second time, pushing every
+        // screen's top bar down by an extra status-bar height.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showCartBar) {
                 Button(
@@ -176,12 +197,25 @@ private fun MainGraph(onLogout: () -> Unit) {
             navController = nav,
             startDestination = Route.Menu,
             modifier = Modifier.padding(scaffoldPadding),
+            enterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+            },
+            exitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
+            },
+            popEnterTransition = {
+                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
+            },
         ) {
             composable(Route.Menu) {
                 MenuScreen(
                     onProduct = { ref -> nav.navigate(Route.productDetail(ref)) },
                     onOrders = { nav.navigate(Route.Orders) },
                     onProfile = { nav.navigate(Route.Profile) },
+                    onSelectDeliveryLocation = { nav.navigate(Route.LocationPicker) },
                 )
             }
 
@@ -206,7 +240,7 @@ private fun MainGraph(onLogout: () -> Unit) {
 
             composable(Route.Cart) {
                 CartScreen(
-                    onBack = { nav.switchTab(Route.Menu) },
+                    onBack = { nav.popBackStack() },
                     onCheckout = { nav.navigate(Route.Checkout) },
                 )
             }
@@ -219,6 +253,17 @@ private fun MainGraph(onLogout: () -> Unit) {
                     },
                     onPaymentRequired = { reference ->
                         nav.navigate(Route.paymentWaiting(reference)) { popUpTo(Route.Menu) }
+                    },
+                    onPickLocation = { nav.navigate(Route.LocationPicker) },
+                )
+            }
+
+            composable(Route.LocationPicker) {
+                LocationPickerScreen(
+                    onBack = { nav.popBackStack() },
+                    onConfirm = { lat, lng, availability ->
+                        LocationPickBus.submit(lat, lng, availability)
+                        nav.popBackStack()
                     },
                 )
             }
@@ -255,6 +300,7 @@ private fun MainGraph(onLogout: () -> Unit) {
                 OrdersScreen(
                     onBack = { nav.popBackStack() },
                     onOrder = { id -> nav.navigate(Route.orderDetail(id)) },
+                    onOpenCart = { nav.navigate(Route.Cart) { launchSingleTop = true } },
                 )
             }
 
@@ -265,6 +311,7 @@ private fun MainGraph(onLogout: () -> Unit) {
                 OrderDetailScreen(
                     orderId = entry.arguments?.getLong("orderId") ?: 0L,
                     onBack = { nav.popBackStack() },
+                    onOpenCart = { nav.navigate(Route.Cart) { launchSingleTop = true } },
                 )
             }
         }
@@ -273,18 +320,18 @@ private fun MainGraph(onLogout: () -> Unit) {
 
 @Composable
 private fun Splash() {
-    Column(
+    Box(
         modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        OstaRostoLogo(modifier = Modifier.fillMaxWidth(0.6f).height(96.dp))
-        CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp))
-        Spacer(Modifier.height(16.dp))
+        OstaRostoLogo(
+            modifier = Modifier.fillMaxWidth(0.6f).height(96.dp).align(Alignment.Center),
+        )
         Text(
-            text = "© ${kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.UTC).year} ostarosto.com — جميع الحقوق محفوظة",
+            text = Ar.allRightsReserved,
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom = 16.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
     }
 }

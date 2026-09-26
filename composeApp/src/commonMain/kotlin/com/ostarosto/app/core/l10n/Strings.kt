@@ -11,6 +11,7 @@ object Ar {
     // Auth
     const val enterPhone = "أدخل رقم هاتفك"
     const val phoneHint = "رقم الهاتف"
+    const val continueBtn = "متابعة"
     const val sendCode = "إرسال الرمز"
     const val enterCode = "أدخل رمز التحقق"
     const val codeSentTo = "تم إرسال رمز إلى"
@@ -21,9 +22,13 @@ object Ar {
     const val yourName = "اسمك"
     const val saveAndContinue = "حفظ ومتابعة"
     const val invalidCode = "رمز غير صحيح"
+    const val enterPin = "أدخل رمز PIN الخاص بك"
+    const val pinHint = "رمز PIN (4 أرقام)"
+    const val login = "تسجيل الدخول"
 
     // Menu
     const val menu = "المنيو"
+    const val home = "الرئيسية"
     const val chooseBranch = "اختر الفرع"
     const val branchClosed = "الفرع مغلق حالياً"
     const val openNow = "مفتوح الآن"
@@ -40,6 +45,8 @@ object Ar {
     // Cart / checkout
     const val cart = "السلة"
     const val emptyCart = "سلتك فارغة"
+    const val emptyCartHint = "أضف بعض الأصناف الشهية من المنيو لتبدأ طلبك"
+    const val browseMenu = "تصفح المنيو"
     const val subtotal = "الإجمالي الفرعي"
     const val discount = "الخصم"
     const val tax = "الضريبة"
@@ -51,8 +58,20 @@ object Ar {
     const val deliveryAddress = "عنوان التوصيل"
     const val orderNotes = "ملاحظات الطلب"
     const val paymentMethod = "طريقة الدفع"
+    const val walletPayment = "المحفظة الإلكترونية"
     const val placeOrder = "تأكيد الطلب"
     const val orderPlaced = "تم استلام طلبك"
+
+    // Location picker
+    const val selectLocationOnMap = "حدد موقع التوصيل على الخريطة"
+    const val changeLocation = "تغيير الموقع"
+    const val confirmLocation = "تأكيد الموقع"
+    const val checkingAvailability = "جارٍ التحقق من إمكانية التوصيل…"
+    const val deliveryAvailableHere = "التوصيل متاح لهذا الموقع"
+    const val deliveryNotAvailableHere = "عذراً، لا يتوفر توصيل لهذا الموقع"
+    const val estimatedTimeLabel = "الوقت المتوقع"
+    const val addressDetailsOptional = "تفاصيل إضافية للعنوان (اختياري)"
+    const val tapMapToPlacePin = "اضغط على الخريطة لتحديد موقعك بدقة"
 
     // Card payment
     const val redirectingToPayment = "جارٍ تحويلك إلى صفحة الدفع…"
@@ -81,6 +100,10 @@ object Ar {
     const val orderItems = "عناصر الطلب"
     const val orderSummary = "ملخص الطلب"
     const val noOrders = "لا توجد طلبات بعد"
+    const val reorder = "إعادة الطلب"
+    const val reorderPartial = "تمت إضافة العناصر المتاحة فقط إلى السلة"
+    const val reorderUnavailable = "عناصر هذا الطلب غير متاحة حالياً"
+    const val ok = "حسناً"
 
     // Progress steps
     const val stepReceived = "تم الاستلام"
@@ -96,4 +119,5 @@ object Ar {
     const val somethingWentWrong = "حدث خطأ ما"
     const val noConnection = "لا يوجد اتصال بالإنترنت"
     const val logout = "تسجيل الخروج"
+    const val allRightsReserved = "جميع الحقوق محفوظة © 2026 أسطى روستو"
 }

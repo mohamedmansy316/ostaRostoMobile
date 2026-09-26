@@ -15,6 +15,11 @@ data class CustomerDto(
 )
 
 @Serializable
+data class CheckPhoneDto(
+    val exists: Boolean = false,
+)
+
+@Serializable
 data class VerifyOtpDataDto(
     val token: String,
     val customer: CustomerDto,
@@ -93,6 +98,8 @@ data class ProductDto(
     @SerialName("category_id") val categoryId: Long? = null,
     @SerialName("nutrition_facts") val nutrition: NutritionFactsDto = NutritionFactsDto(),
     val modifiers: List<ModifierDto> = emptyList(),
+    // List endpoints omit the full modifier tree to stay light and send this flag instead.
+    @SerialName("has_modifiers") val hasModifiers: Boolean = false,
 )
 
 @Serializable
@@ -110,11 +117,38 @@ data class ComboDto(
 )
 
 @Serializable
+data class HeroSlideDto(
+    val id: Long,
+    val title: String? = null,
+    val description: String? = null,
+    @SerialName("badge_text") val badgeText: String? = null,
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("video_url") val videoUrl: String? = null,
+    @SerialName("order_online_link") val orderOnlineLink: String? = null,
+    @SerialName("sort_order") val sortOrder: Int = 0,
+)
+
+@Serializable
+data class PromotionalBannerDto(
+    val id: Long,
+    val title: String = "",
+    val subtitle: String? = null,
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("background_color") val backgroundColor: String? = null,
+    @SerialName("text_color") val textColor: String? = null,
+    @SerialName("discount_text") val discountText: String? = null,
+    @SerialName("deal_text") val dealText: String? = null,
+    @SerialName("link_url") val linkUrl: String? = null,
+    @SerialName("sort_order") val sortOrder: Int = 0,
+)
+
+@Serializable
 data class PaymentMethodDto(
     val id: String,
     val name: String = "",
     val code: String? = null,
     @SerialName("is_paymob") val isPaymob: Boolean = false,
+    @SerialName("is_wallet_enabled") val isWalletEnabled: Boolean = false,
 )
 
 @Serializable
@@ -181,6 +215,18 @@ data class PaymentStatusDto(
     val status: String = "pending",
     val reference: String = "",
     val order: OrderDto? = null,
+)
+
+@Serializable
+data class DeliveryCheckDto(
+    val available: Boolean = false,
+    @SerialName("zone_id") val zoneId: Int? = null,
+    @SerialName("zone_name") val zoneName: String? = null,
+    @SerialName("branch_id") val branchId: Long? = null,
+    @SerialName("branch_name") val branchName: String? = null,
+    @SerialName("delivery_fee") val deliveryFee: Double = 0.0,
+    @SerialName("distance_km") val distanceKm: Double? = null,
+    @SerialName("estimated_time") val estimatedTime: String? = null,
 )
 
 @Serializable

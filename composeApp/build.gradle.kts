@@ -65,6 +65,7 @@ kotlin {
 
             implementation(libs.multiplatform.settings)
             implementation(libs.napier)
+            implementation(libs.webview.multiplatform)
         }
 
         commonTest.dependencies {
@@ -81,6 +82,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
             implementation(libs.androidx.core.ktx)
+            implementation(libs.androidx.browser)
             implementation(libs.androidx.security.crypto)
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.messaging)

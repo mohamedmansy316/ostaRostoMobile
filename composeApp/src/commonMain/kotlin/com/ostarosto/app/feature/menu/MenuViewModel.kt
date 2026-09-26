@@ -7,7 +7,11 @@ import com.ostarosto.app.core.state.SelectionStore
 import com.ostarosto.app.data.repository.CatalogRepository
 import com.ostarosto.app.domain.model.Branch
 import com.ostarosto.app.domain.model.Category
+import com.ostarosto.app.domain.model.HeroSlide
+import com.ostarosto.app.domain.model.OrderType
 import com.ostarosto.app.domain.model.Product
+import com.ostarosto.app.domain.model.PromotionalBanner
+import com.ostarosto.app.feature.cart.CartStore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +23,7 @@ data class MenuUiState(
     val loadingShell: Boolean = true, // first paint: branches/categories still loading
     val branches: List<Branch> = emptyList(),
     val selectedBranch: Branch? = null,
+    val orderType: OrderType = OrderType.Pickup,
     val categories: List<Category> = emptyList(),
     val selectedCategoryId: Long? = null,
     val search: String = "",
@@ -26,39 +31,61 @@ data class MenuUiState(
     val loadingCatalog: Boolean = false, // one-time full-catalogue fetch
     val refreshing: Boolean = false, // pull-to-refresh
     val error: String? = null,
+    val heroSlides: List<HeroSlide> = emptyList(),
+    val promotionalBanners: List<PromotionalBanner> = emptyList(),
 ) {
     val branchRef: String? get() = selectedBranch?.let { it.foodicsId ?: it.id.toString() }
 
     /**
      * The visible grid: the in-memory catalogue narrowed by the selected category
-     * tab and the search box. Pure filter — switching tabs never touches the network.
+     * tab, or — while searching — by the search term across the whole catalogue
+     * regardless of category. Pure filter — switching tabs never touches the network.
      */
     val products: List<Product>
         get() {
-            val term = search.trim()
-            return allProducts.filter { p ->
-                (selectedCategoryId == null || p.categoryId == selectedCategoryId) &&
-                    (
-                        term.isEmpty() ||
-                            p.name.contains(term, ignoreCase = true) ||
-                            p.description?.contains(term, ignoreCase = true) == true
-                    )
+            val term = search.trim().normalizeArabic()
+            if (term.isNotEmpty()) {
+                return allProducts.filter { p ->
+                    p.name.normalizeArabic().contains(term) ||
+                        p.description?.normalizeArabic()?.contains(term) == true
+                }
             }
+            return allProducts.filter { p -> selectedCategoryId == null || p.categoryId == selectedCategoryId }
         }
 }
+
+/**
+ * Folds Arabic letter variants that people type interchangeably (ta marbuta
+ * vs. ha, alef forms, alef maksura vs. ya) so "فتة" and "فته" match the same
+ * product, then lowercases for the Latin fallback.
+ */
+private fun String.normalizeArabic(): String = lowercase()
+    .replace('ة', 'ه')
+    .replace('أ', 'ا')
+    .replace('إ', 'ا')
+    .replace('آ', 'ا')
+    .replace('ى', 'ي')
 
 class MenuViewModel(
     private val catalog: CatalogRepository,
     private val selection: SelectionStore,
+    private val cart: CartStore,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(MenuUiState())
+    private val _state = MutableStateFlow(MenuUiState(orderType = selection.orderType.value))
     val state: StateFlow<MenuUiState> = _state.asStateFlow()
 
     private var catalogJob: Job? = null
 
     init {
         load()
+        loadHomeContent()
+    }
+
+    /** Pickup/delivery chosen up front, alongside the branch — not just at checkout. */
+    fun setOrderType(type: OrderType) {
+        selection.setOrderType(type)
+        _state.update { it.copy(orderType = type) }
     }
 
     fun load() {
@@ -107,10 +134,16 @@ class MenuViewModel(
         _state.update { it.copy(search = term) }
     }
 
-    /** Pull-to-refresh: re-pull branches, categories and the whole catalogue. */
+    /** Products with no modifiers need no configuration — add them straight from the grid. */
+    fun addToCart(product: Product) {
+        cart.addProduct(product, quantity = 1, options = emptyList(), notes = null)
+    }
+
+    /** Pull-to-refresh: re-pull branches, categories, home content and the whole catalogue. */
     fun refresh() {
         if (_state.value.refreshing) return
         _state.update { it.copy(refreshing = true, error = null) }
+        loadHomeContent()
         viewModelScope.launch {
             (catalog.branches() as? ApiResult.Success)?.let { b ->
                 _state.update { it.copy(branches = b.value) }
@@ -131,12 +164,27 @@ class MenuViewModel(
                     it.copy(
                         loadingShell = false,
                         categories = cats.value,
+                        // null == the Home tab (hero/promo + every product); only keep a
+                        // previously selected category if it still exists on this branch.
                         selectedCategoryId = it.selectedCategoryId
-                            ?.takeIf { id -> cats.value.any { c -> c.id == id } }
-                            ?: cats.value.firstOrNull()?.id,
+                            ?.takeIf { id -> cats.value.any { c -> c.id == id } },
                     )
                 }
                 else -> _state.update { it.copy(loadingShell = false) }
+            }
+        }
+    }
+
+    /** One shot: the same for every branch, so it loads once and never refreshes with it. */
+    private fun loadHomeContent() {
+        viewModelScope.launch {
+            (catalog.heroSlides() as? ApiResult.Success)?.let { r ->
+                _state.update { it.copy(heroSlides = r.value) }
+            }
+        }
+        viewModelScope.launch {
+            (catalog.promotionalBanners() as? ApiResult.Success)?.let { r ->
+                _state.update { it.copy(promotionalBanners = r.value) }
             }
         }
     }

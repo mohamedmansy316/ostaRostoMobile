@@ -57,8 +57,22 @@ fun AuthFlow(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 )
-                Button(onClick = viewModel::requestOtp, enabled = !state.loading && state.phone.length >= 8) {
-                    Text(Ar.sendCode)
+                Button(onClick = viewModel::checkPhone, enabled = !state.loading && state.phone.length >= 8) {
+                    Text(Ar.continueBtn)
+                }
+            }
+
+            AuthStep.Pin -> {
+                Text(Ar.enterPin, style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    value = state.pin,
+                    onValueChange = viewModel::onPin,
+                    label = { Text(Ar.pinHint) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                )
+                Button(onClick = viewModel::verifyPin, enabled = !state.loading && state.pin.length == 4) {
+                    Text(Ar.login)
                 }
             }
 

@@ -34,6 +34,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -119,12 +121,12 @@ private fun ProductContent(
     Column(
         Modifier.fillMaxSize().padding(contentPadding).verticalScroll(rememberScrollState()),
     ) {
-        Box(Modifier.fillMaxWidth().height(220.dp)) {
+        Box(Modifier.fillMaxWidth().height(220.dp).background(Color.White)) {
             AsyncImage(
                 model = product.image,
                 contentDescription = product.name,
-                modifier = Modifier.fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
             )
             if (discountPercent != null) {
                 Surface(
@@ -257,7 +259,7 @@ private fun ModifierGroup(
             val selected = option.foodicsId in selectedIds
             FilterChip(
                 selected = selected,
-                enabled = !option.isOutOfStock,
+                enabled = !option.isOutOfStock && !modifier.hasSingleChoice(),
                 onClick = { onToggle(option) },
                 shape = RoundedCornerShape(12.dp),
                 leadingIcon = if (selected) {

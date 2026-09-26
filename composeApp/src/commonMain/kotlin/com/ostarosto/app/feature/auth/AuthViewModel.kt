@@ -10,13 +10,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class AuthStep { Phone, Otp, Profile, Done }
+enum class AuthStep { Phone, Pin, Otp, Profile, Done }
 
 data class AuthUiState(
     val step: AuthStep = AuthStep.Phone,
     val dialCode: Int = 20,
     val phone: String = "",
     val otp: String = "",
+    val pin: String = "",
     val name: String = "",
     val loading: Boolean = false,
     val error: String? = null,
@@ -31,7 +32,38 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
     fun onDialCode(code: Int) = _state.update { it.copy(dialCode = code, error = null) }
     fun onPhone(value: String) = _state.update { it.copy(phone = value.filter(Char::isDigit), error = null) }
     fun onOtp(value: String) = _state.update { it.copy(otp = value.filter(Char::isDigit).take(6), error = null) }
+    fun onPin(value: String) = _state.update { it.copy(pin = value.filter(Char::isDigit).take(4), error = null) }
     fun onName(value: String) = _state.update { it.copy(name = value, error = null) }
+
+    fun checkPhone() = launchGuarded {
+        val s = _state.value
+        when (val r = repo.checkPhone(s.dialCode, s.phone)) {
+            is ApiResult.Success ->
+                if (r.value) {
+                    _state.update { it.copy(loading = false, step = AuthStep.Pin) }
+                } else {
+                    when (val otp = repo.requestOtp(s.dialCode, s.phone)) {
+                        is ApiResult.Success -> _state.update { it.copy(loading = false, step = AuthStep.Otp) }
+                        else -> fail(otp)
+                    }
+                }
+            else -> fail(r)
+        }
+    }
+
+    fun verifyPin() = launchGuarded {
+        val s = _state.value
+        when (val r = repo.verifyPin(s.dialCode, s.phone, s.pin, deviceName = null)) {
+            is ApiResult.Success ->
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        step = if (r.value.needsProfile) AuthStep.Profile else AuthStep.Done,
+                    )
+                }
+            else -> fail(r)
+        }
+    }
 
     fun requestOtp() = launchGuarded {
         when (val r = repo.requestOtp(_state.value.dialCode, _state.value.phone)) {

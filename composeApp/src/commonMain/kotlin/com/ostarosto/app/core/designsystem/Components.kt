@@ -1,5 +1,8 @@
 package com.ostarosto.app.core.designsystem
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -31,7 +35,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ostarosto.app.core.l10n.Ar
 import com.ostarosto.app.domain.model.OrderProgress
@@ -171,12 +177,33 @@ fun PrimaryButton(
     }
 }
 
+/** Compact bordered pill: minus, value, plus. Used on product and cart lines. */
 @Composable
 fun QuantityStepper(value: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { onChange(value - 1) }) { Icon(Icons.Default.Remove, contentDescription = "−") }
-        Text("$value", style = MaterialTheme.typography.titleMedium)
-        IconButton(onClick = { onChange(value + 1) }) { Icon(Icons.Default.Add, contentDescription = "+") }
+    Row(
+        modifier
+            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), RoundedCornerShape(50)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StepperButton(Icons.Default.Remove, onClick = { onChange(value - 1) })
+        Text(
+            "$value",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(min = 22.dp),
+        )
+        StepperButton(Icons.Default.Add, onClick = { onChange(value + 1) })
+    }
+}
+
+@Composable
+private fun StepperButton(icon: ImageVector, onClick: () -> Unit) {
+    Box(
+        Modifier.size(32.dp).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -200,7 +227,7 @@ fun OrderProgressStepper(progress: OrderProgress, isPickup: Boolean, modifier: M
         labels.forEachIndexed { index, label ->
             val step = index + 1
             val done = step <= active
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                 Surface(
                     shape = CircleShape,
                     color = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,

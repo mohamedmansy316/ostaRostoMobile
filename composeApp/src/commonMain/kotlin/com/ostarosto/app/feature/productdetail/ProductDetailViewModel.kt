@@ -21,6 +21,9 @@ private val CHOICE_KEYWORDS = listOf("اختيار", "اختار", "choice", "se
 fun Modifier.isRequired(): Boolean =
     minSelection > 0 || CHOICE_KEYWORDS.any { name.contains(it, ignoreCase = true) }
 
+/** A single in-stock option leaves nothing to actually choose — it's locked, not optional. */
+fun Modifier.hasSingleChoice(): Boolean = options.count { !it.isOutOfStock } == 1
+
 data class ProductDetailUiState(
     val loading: Boolean = true,
     val product: Product? = null,
@@ -76,6 +79,7 @@ class ProductDetailViewModel(
     fun toggleOption(modifier: Modifier, option: ModifierOption) {
         val id = option.foodicsId ?: return
         if (option.isOutOfStock) return
+        if (modifier.hasSingleChoice()) return
         _state.update { s ->
             val current = s.selections[modifier.id].orEmpty()
             val next = when {
@@ -107,11 +111,11 @@ class ProductDetailViewModel(
         _state.update { it.copy(added = true) }
     }
 
-    /** Only auto-select a required group when there is a single in-stock option (no real choice). */
+    /** Auto-select a modifier's only in-stock option — there's no real choice to make. */
     private fun defaultSelections(product: Product): Map<Long, Set<String>> =
         product.modifiers.associate { modifier ->
             val inStock = modifier.options.filter { !it.isOutOfStock }
-            val preselect = if (modifier.isRequired() && inStock.size == 1) {
+            val preselect = if (inStock.size == 1) {
                 inStock.first().foodicsId?.let { setOf(it) } ?: emptySet()
             } else {
                 emptySet()

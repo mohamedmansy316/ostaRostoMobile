@@ -4,11 +4,14 @@ import com.ostarosto.app.core.auth.SessionManager
 import com.ostarosto.app.core.network.ApiClient
 import com.ostarosto.app.core.network.ApiResult
 import com.ostarosto.app.core.network.map
+import com.ostarosto.app.data.dto.CheckPhoneBody
+import com.ostarosto.app.data.dto.CheckPhoneDto
 import com.ostarosto.app.data.dto.CompleteProfileBody
 import com.ostarosto.app.data.dto.CustomerDto
 import com.ostarosto.app.data.dto.RequestOtpBody
 import com.ostarosto.app.data.dto.VerifyOtpBody
 import com.ostarosto.app.data.dto.VerifyOtpDataDto
+import com.ostarosto.app.data.dto.VerifyPinBody
 import com.ostarosto.app.data.dto.toDomain
 import com.ostarosto.app.domain.model.Customer
 import kotlinx.serialization.builtins.serializer
@@ -18,8 +21,30 @@ class AuthRepository(
     private val session: SessionManager,
 ) {
 
+    suspend fun checkPhone(dialCode: Int, phone: String): ApiResult<Boolean> =
+        api.post("auth/check-phone", CheckPhoneDto.serializer(), CheckPhoneBody(dialCode, phone))
+            .map { it.exists }
+
     suspend fun requestOtp(dialCode: Int, phone: String): ApiResult<Unit> =
         api.postUnit("auth/otp/request", RequestOtpBody(dialCode, phone))
+
+    suspend fun verifyPin(
+        dialCode: Int,
+        phone: String,
+        pin: String,
+        deviceName: String?,
+    ): ApiResult<Customer> {
+        val result = api.post(
+            "auth/pin/verify",
+            VerifyOtpDataDto.serializer(),
+            VerifyPinBody(dialCode, phone, pin, deviceName),
+        )
+        return result.map { dto ->
+            val customer = dto.customer.toDomain()
+            session.onSignedIn(dto.token, customer, dto.needsProfile)
+            customer
+        }
+    }
 
     suspend fun verifyOtp(
         dialCode: Int,

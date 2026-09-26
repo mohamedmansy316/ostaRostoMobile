@@ -4,6 +4,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class CheckPhoneBody(
+    @SerialName("dial_code") val dialCode: Int,
+    val phone: String,
+)
+
+@Serializable
 data class RequestOtpBody(
     @SerialName("dial_code") val dialCode: Int,
     val phone: String,
@@ -14,6 +20,14 @@ data class VerifyOtpBody(
     @SerialName("dial_code") val dialCode: Int,
     val phone: String,
     val otp: String,
+    @SerialName("device_name") val deviceName: String? = null,
+)
+
+@Serializable
+data class VerifyPinBody(
+    @SerialName("dial_code") val dialCode: Int,
+    val phone: String,
+    val pin: String,
     @SerialName("device_name") val deviceName: String? = null,
 )
 
@@ -74,6 +88,7 @@ data class PlaceOrderBody(
     val type: Int,
     @SerialName("branch_id") val branchId: String,
     @SerialName("payment_method_id") val paymentMethodId: String,
+    @SerialName("payment_channel") val paymentChannel: String? = null,
     val products: List<CartLineBody> = emptyList(),
     val combos: List<CartLineBody> = emptyList(),
     @SerialName("coupon_code") val couponCode: String? = null,
