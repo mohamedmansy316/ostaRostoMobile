@@ -31,6 +31,7 @@ targets:
         # Local dev over plain HTTP (php artisan serve). Tighten for release.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        NSLocationWhenInUseUsageDescription: نحتاج موقعك لعرض مناطق التوصيل المتاحة بالقرب منك
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ostarosto.app

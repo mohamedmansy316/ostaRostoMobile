@@ -65,6 +65,7 @@ data class CartTotalsBody(
     @SerialName("delivery_fee") val deliveryFee: Double? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    @SerialName("zone_id") val zoneId: Int? = null,
 )
 
 @Serializable

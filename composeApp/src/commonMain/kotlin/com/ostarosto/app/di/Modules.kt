@@ -1,5 +1,6 @@
 package com.ostarosto.app.di
 
+import com.ostarosto.app.core.address.SavedAddressStore
 import com.ostarosto.app.core.auth.SessionManager
 import com.ostarosto.app.core.auth.TokenStore
 import com.ostarosto.app.core.network.ApiClient
@@ -34,6 +35,7 @@ val coreModule: Module = module {
     single { SessionManager(get()) }
     single { HttpClientFactory.create(get()) }
     single { ApiClient(get(), onUnauthorized = get<SessionManager>()::onSignedOut) }
+    single { SavedAddressStore(get()) }
 }
 
 val dataModule: Module = module {

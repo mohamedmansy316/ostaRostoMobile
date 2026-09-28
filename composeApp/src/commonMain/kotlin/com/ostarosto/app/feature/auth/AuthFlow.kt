@@ -71,7 +71,7 @@ fun AuthFlow(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 )
-                Button(onClick = viewModel::verifyPin, enabled = !state.loading && state.pin.length == 4) {
+                Button(onClick = viewModel::verifyPin, enabled = !state.loading && state.pin.length == 6) {
                     Text(Ar.login)
                 }
             }

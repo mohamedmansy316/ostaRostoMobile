@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.ostarosto.app.core.platform.AndroidLocationProvider
 import com.ostarosto.app.core.platform.AndroidUrlOpener
+import com.ostarosto.app.core.platform.LocationProvider
 import com.ostarosto.app.core.platform.UrlOpener
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
@@ -16,6 +18,7 @@ private const val SECURE_PREFS = "osta_rosto_secure"
 
 actual val platformModule: Module = module {
     single<UrlOpener> { AndroidUrlOpener(get<Context>()) }
+    single<LocationProvider> { AndroidLocationProvider(get<Context>()) }
     single<Settings> { SharedPreferencesSettings(securePrefs(get<Context>())) }
 }
 

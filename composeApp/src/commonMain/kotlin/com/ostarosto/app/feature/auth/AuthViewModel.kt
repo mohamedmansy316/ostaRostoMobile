@@ -32,7 +32,7 @@ class AuthViewModel(private val repo: AuthRepository) : ViewModel() {
     fun onDialCode(code: Int) = _state.update { it.copy(dialCode = code, error = null) }
     fun onPhone(value: String) = _state.update { it.copy(phone = value.filter(Char::isDigit), error = null) }
     fun onOtp(value: String) = _state.update { it.copy(otp = value.filter(Char::isDigit).take(6), error = null) }
-    fun onPin(value: String) = _state.update { it.copy(pin = value.filter(Char::isDigit).take(4), error = null) }
+    fun onPin(value: String) = _state.update { it.copy(pin = value.filter(Char::isDigit).take(6), error = null) }
     fun onName(value: String) = _state.update { it.copy(name = value, error = null) }
 
     fun checkPhone() = launchGuarded {

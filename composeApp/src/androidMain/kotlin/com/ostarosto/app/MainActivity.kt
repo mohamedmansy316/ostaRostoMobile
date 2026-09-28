@@ -10,12 +10,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.ostarosto.app.core.platform.LocationPermissionBridge
 import com.ostarosto.app.navigation.DeepLinkBus
 
 class MainActivity : ComponentActivity() {
 
     private val requestNotifications =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* best effort */ }
+
+    private val requestLocationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            LocationPermissionBridge.onResult(results.values.any { it })
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -25,6 +31,7 @@ class MainActivity : ComponentActivity() {
         DeepLinkBus.submit(intent?.data?.toString())
 
         maybeRequestNotificationPermission()
+        LocationPermissionBridge.attach { perms -> requestLocationPermission.launch(perms) }
 
         setContent { App() }
     }

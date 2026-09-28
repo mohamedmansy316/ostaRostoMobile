@@ -230,6 +230,14 @@ data class DeliveryCheckDto(
 )
 
 @Serializable
+data class DeliveryZoneDto(
+    val id: Int,
+    val name: String = "",
+    @SerialName("delivery_fee") val deliveryFee: Double = 0.0,
+    @SerialName("branch_id") val branchId: Long? = null,
+)
+
+@Serializable
 data class OrderDto(
     val id: Long,
     @SerialName("order_number") val orderNumber: String = "",

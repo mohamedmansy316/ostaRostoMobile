@@ -4,8 +4,11 @@ import com.ostarosto.app.core.network.ApiClient
 import com.ostarosto.app.core.network.ApiResult
 import com.ostarosto.app.core.network.map
 import com.ostarosto.app.data.dto.DeliveryCheckDto
+import com.ostarosto.app.data.dto.DeliveryZoneDto
 import com.ostarosto.app.data.dto.toDomain
 import com.ostarosto.app.domain.model.DeliveryAvailability
+import com.ostarosto.app.domain.model.DeliveryZone
+import kotlinx.serialization.builtins.ListSerializer
 
 class DeliveryRepository(private val api: ApiClient) {
 
@@ -15,4 +18,12 @@ class DeliveryRepository(private val api: ApiClient) {
             DeliveryCheckDto.serializer(),
             query = mapOf("lat" to lat, "lng" to lng, "branch_id" to branchId),
         ).map { it.toDomain() }
+
+    /** Browsable list of a branch's delivery zones with their flat fees. */
+    suspend fun listZones(branchId: String?): ApiResult<List<DeliveryZone>> =
+        api.get(
+            "delivery/zones",
+            ListSerializer(DeliveryZoneDto.serializer()),
+            query = mapOf("branch_id" to branchId),
+        ).map { list -> list.map { it.toDomain() } }
 }

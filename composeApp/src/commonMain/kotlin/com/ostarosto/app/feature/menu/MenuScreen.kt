@@ -115,6 +115,7 @@ fun MenuScreen(
     viewModel: MenuViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val deliveryDestination by viewModel.deliveryDestination.collectAsStateWithLifecycle()
     var branchSheet by remember { mutableStateOf(false) }
 
     val gridState = rememberLazyGridState()
@@ -123,8 +124,21 @@ fun MenuScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    TextButton(onClick = { branchSheet = true }) {
-                        Text(state.selectedBranch?.name ?: Ar.chooseBranch)
+                    Column {
+                        TextButton(onClick = { branchSheet = true }, contentPadding = PaddingValues(0.dp)) {
+                            Text(state.selectedBranch?.name ?: Ar.chooseBranch)
+                        }
+                        if (state.orderType == OrderType.Delivery) {
+                            Text(
+                                deliveryDestination?.let { "${Ar.deliveringTo}: ${it.displayText}" }
+                                    ?: Ar.noDeliveryLocationYet,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 16.dp),
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -212,9 +226,27 @@ fun MenuScreen(
                 object : NestedScrollConnection {
                     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                         if (!showHeader) return Offset.Zero
-                        val previous = revealPx
-                        revealPx = (revealPx + available.y).coerceIn(0f, headerHeightPx)
-                        return Offset(0f, revealPx - previous)
+                        // Only intercept downward scroll to hide the header before the grid scrolls.
+                        // Upward reveal is handled in onPostScroll so the header only shows
+                        // once the grid is fully scrolled back to the top.
+                        if (available.y < 0) {
+                            val previous = revealPx
+                            revealPx = (revealPx + available.y).coerceIn(0f, headerHeightPx)
+                            return Offset(0f, revealPx - previous)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                        if (!showHeader) return Offset.Zero
+                        // Reveal the header only after the grid has consumed all it can scrolling up
+                        // (available.y > 0 means the grid is already at the top).
+                        if (available.y > 0) {
+                            val previous = revealPx
+                            revealPx = (revealPx + available.y).coerceIn(0f, headerHeightPx)
+                            return Offset(0f, revealPx - previous)
+                        }
+                        return Offset.Zero
                     }
 
                     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
@@ -315,6 +347,16 @@ fun MenuScreen(
                         onClick = { viewModel.setOrderType(OrderType.Delivery) },
                         shape = SegmentedButtonDefaults.itemShape(1, 2),
                     ) { Text(Ar.delivery) }
+                }
+                if (state.orderType == OrderType.Delivery) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        deliveryDestination?.let { "${Ar.deliveringTo}: ${it.displayText}" }
+                            ?: Ar.noDeliveryLocationYet,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (deliveryDestination != null) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (deliveryDestination != null) OstaColors.Maroon else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))

@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.DeliveryDining
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payments
@@ -46,6 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,7 +60,6 @@ import com.ostarosto.app.core.designsystem.LoadingBox
 import com.ostarosto.app.core.designsystem.OrderProgressStepper
 import com.ostarosto.app.core.designsystem.OstaColors
 import com.ostarosto.app.core.designsystem.PriceBreakdown
-import com.ostarosto.app.core.designsystem.SectionLabel
 import com.ostarosto.app.core.designsystem.money
 import com.ostarosto.app.core.l10n.Ar
 import com.ostarosto.app.domain.model.OrderItem
@@ -109,65 +112,100 @@ fun OrderDetailScreen(
 
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // Status
-            val statusContainer = if (order.progress == OrderProgress.Cancelled) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
+            // ── Hero Status Card ──────────────────────────────────────────────
+            val (heroContainer, heroContent) = when (order.progress) {
+                OrderProgress.Cancelled ->
+                    MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.error
+                OrderProgress.Completed ->
+                    OstaColors.Success.copy(alpha = 0.12f) to OstaColors.Success
+                else ->
+                    OstaColors.Maroon to Color.White
             }
-            val statusContent = if (order.progress == OrderProgress.Cancelled) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            }
+
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = statusContainer),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = heroContainer),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
-                Column(Modifier.padding(16.dp)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Icon(
-                            if (order.isPickup) Icons.Default.Storefront else Icons.Default.DeliveryDining,
-                            contentDescription = null,
-                            tint = statusContent,
-                        )
-                        Text(
-                            order.displayStatus,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = statusContent,
-                        )
+                        Box(
+                            Modifier
+                                .size(48.dp)
+                                .background(heroContent.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                if (order.isPickup) Icons.Default.Storefront else Icons.Default.DeliveryDining,
+                                contentDescription = null,
+                                tint = heroContent,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                order.displayStatus,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = heroContent,
+                            )
+                            val meta = listOfNotNull(order.branch?.name, order.createdAt?.take(10))
+                            if (meta.isNotEmpty()) {
+                                Text(
+                                    meta.joinToString("  ·  "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = heroContent.copy(alpha = 0.75f),
+                                )
+                            }
+                        }
                     }
-                    val meta = listOfNotNull(order.branch?.name, order.createdAt?.take(10))
-                    if (meta.isNotEmpty()) {
-                        Text(
-                            meta.joinToString("  •  "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = statusContent.copy(alpha = 0.8f),
-                        )
-                    }
+
                     order.estimatedArrival?.let {
-                        Text(
-                            "~ ${it.take(16).replace('T', ' ')}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = statusContent.copy(alpha = 0.8f),
-                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .background(heroContent.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(Icons.Default.AccessTime, null, tint = heroContent, modifier = Modifier.size(16.dp))
+                            Text(
+                                "${Ar.estimatedTimeLabel}: ${it.take(16).replace('T', ' ')}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = heroContent,
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(16.dp))
-                    OrderProgressStepper(order.progress, order.isPickup)
                 }
             }
 
-            // Items
-            Card(shape = RoundedCornerShape(16.dp)) {
+            // ── Progress Tracker Card ─────────────────────────────────────────
+            if (order.progress != OrderProgress.Cancelled) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 20.dp)) {
+                        OrderProgressStepper(order.progress, order.isPickup)
+                    }
+                }
+            }
+
+            // ── Items Card ────────────────────────────────────────────────────
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
                 Column(Modifier.padding(16.dp)) {
-                    SectionLabel(Ar.orderItems)
+                    SectionHeaderRow(Ar.orderItems)
+                    Spacer(Modifier.height(10.dp))
                     order.items.forEachIndexed { index, item ->
                         if (index > 0) HorizontalDivider(Modifier.padding(vertical = 10.dp), color = OstaColors.Hairline)
                         OrderItemRow(item)
@@ -175,10 +213,14 @@ fun OrderDetailScreen(
                 }
             }
 
-            // Summary
-            Card(shape = RoundedCornerShape(16.dp)) {
+            // ── Summary Card ──────────────────────────────────────────────────
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
                 Column(Modifier.padding(16.dp)) {
-                    SectionLabel(Ar.orderSummary)
+                    SectionHeaderRow(Ar.orderSummary)
+                    Spacer(Modifier.height(10.dp))
                     PriceBreakdown(
                         subtotal = order.subtotal,
                         discount = order.discount,
@@ -188,28 +230,34 @@ fun OrderDetailScreen(
                         showDelivery = !order.isPickup,
                     )
                     order.paymentMethod?.let {
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(14.dp))
                         IconRow(Icons.Default.Payments, "${Ar.paymentMethod}: $it")
                     }
                     order.address?.let {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         IconRow(Icons.Default.LocationOn, it)
                     }
                 }
             }
 
+            // ── Action Buttons ────────────────────────────────────────────────
             if (order.items.isNotEmpty()) {
-                OutlinedButton(
+                Button(
                     onClick = { viewModel.reorder(order) },
                     enabled = state.reorderingId != order.id,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = OstaColors.Maroon,
+                        contentColor = Color.White,
+                    ),
                 ) {
                     if (state.reorderingId == order.id) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                     } else {
-                        Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(Ar.reorder, fontWeight = FontWeight.SemiBold)
+                        Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(Ar.reorder, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -218,6 +266,7 @@ fun OrderDetailScreen(
                 OutlinedButton(
                     onClick = { confirmCancel = true },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                 ) { Text(Ar.cancelOrder, fontWeight = FontWeight.SemiBold) }
@@ -271,32 +320,70 @@ fun OrderDetailScreen(
 }
 
 @Composable
+private fun SectionHeaderRow(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            Modifier
+                .width(3.dp)
+                .height(18.dp)
+                .background(OstaColors.Maroon, RoundedCornerShape(2.dp))
+        )
+        Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
 private fun OrderItemRow(item: OrderItem) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
-        Box(
-            Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(OstaColors.MaroonTint),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (!item.image.isNullOrBlank()) {
-                AsyncImage(
-                    model = item.image,
-                    contentDescription = item.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+        Box(Modifier.size(64.dp)) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(OstaColors.MaroonTint),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (!item.image.isNullOrBlank()) {
+                    AsyncImage(
+                        model = item.image,
+                        contentDescription = item.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Restaurant,
+                        contentDescription = null,
+                        tint = OstaColors.Maroon,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .size(20.dp)
+                    .background(OstaColors.Maroon, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "${item.quantity}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
                 )
-            } else {
-                Icon(Icons.Default.Restaurant, contentDescription = null, tint = OstaColors.Maroon, modifier = Modifier.size(22.dp))
             }
         }
-        Column(Modifier.weight(1f)) {
+
+        Column(Modifier.weight(1f).padding(top = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                "${item.quantity}× ${item.nameAr.ifBlank { item.name }}",
+                item.nameAr.ifBlank { item.name },
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
             )
             if (item.modifiers.isNotEmpty()) {
                 Text(
@@ -306,26 +393,40 @@ private fun OrderItemRow(item: OrderItem) {
                 )
             }
         }
-        Text(money(item.lineTotal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+
+        Text(
+            money(item.lineTotal),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = OstaColors.Maroon,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 
 @Composable
-private fun IconRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+private fun IconRow(icon: ImageVector, text: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Box(
+            Modifier
+                .size(34.dp)
+                .background(OstaColors.MaroonTint, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = OstaColors.Maroon,
+            )
+        }
         Text(
             text,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

@@ -3,6 +3,7 @@ package com.ostarosto.app.feature.menu
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ostarosto.app.core.network.ApiResult
+import com.ostarosto.app.core.state.DeliveryDestination
 import com.ostarosto.app.core.state.SelectionStore
 import com.ostarosto.app.data.repository.CatalogRepository
 import com.ostarosto.app.domain.model.Branch
@@ -74,6 +75,9 @@ class MenuViewModel(
 
     private val _state = MutableStateFlow(MenuUiState(orderType = selection.orderType.value))
     val state: StateFlow<MenuUiState> = _state.asStateFlow()
+
+    /** Confirmed delivery destination, if any — shown next to the branch selector. */
+    val deliveryDestination: StateFlow<DeliveryDestination?> = selection.deliveryDestination
 
     private var catalogJob: Job? = null
 

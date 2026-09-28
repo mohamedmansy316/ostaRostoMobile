@@ -3,6 +3,7 @@ package com.ostarosto.app.core.designsystem
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -223,26 +224,71 @@ fun OrderProgressStepper(progress: OrderProgress, isPickup: Boolean, modifier: M
         return
     }
 
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        labels.forEachIndexed { index, label ->
-            val step = index + 1
-            val done = step <= active
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                Surface(
-                    shape = CircleShape,
-                    color = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(28.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (done) Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                        else Text("$step", style = MaterialTheme.typography.labelSmall)
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            labels.forEachIndexed { index, _ ->
+                val step = index + 1
+                val done = step <= active
+                val isCurrent = step == active && progress != OrderProgress.Completed
+
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Surface(
+                        shape = CircleShape,
+                        color = when {
+                            isCurrent -> OstaColors.Yellow
+                            done -> OstaColors.Maroon
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (done && !isCurrent) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            } else {
+                                Text(
+                                    "$step",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isCurrent) OstaColors.MaroonDark else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                 }
+
+                if (index < labels.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(0.5f),
+                        color = if (step < active) OstaColors.Maroon else MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 2.dp,
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        Row(Modifier.fillMaxWidth()) {
+            labels.forEachIndexed { index, label ->
+                val step = index + 1
                 Text(
                     label,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (step == active) FontWeight.Bold else FontWeight.Normal,
+                    color = when {
+                        step < active -> OstaColors.Maroon
+                        step == active -> MaterialTheme.colorScheme.onSurface
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
+                if (index < labels.lastIndex) Spacer(Modifier.weight(0.5f))
             }
         }
     }

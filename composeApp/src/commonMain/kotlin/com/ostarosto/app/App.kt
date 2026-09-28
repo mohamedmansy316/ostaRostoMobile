@@ -18,15 +18,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -44,6 +49,7 @@ import coil3.compose.setSingletonImageLoaderFactory
 import coil3.disk.DiskCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import coil3.request.crossfade
+import com.ostarosto.app.core.address.SavedAddressStore
 import com.ostarosto.app.core.auth.AuthState
 import com.ostarosto.app.core.auth.SessionManager
 import com.ostarosto.app.core.designsystem.OstaRostoLogo
@@ -51,9 +57,14 @@ import com.ostarosto.app.core.designsystem.OstaRostoTheme
 import com.ostarosto.app.core.designsystem.money
 import com.ostarosto.app.core.l10n.Ar
 import com.ostarosto.app.core.network.ApiResult
+import com.ostarosto.app.core.platform.LocationFix
+import com.ostarosto.app.core.platform.LocationProvider
 import com.ostarosto.app.core.platform.imageCacheDirectory
 import com.ostarosto.app.core.state.SelectionStore
 import com.ostarosto.app.data.repository.AuthRepository
+import com.ostarosto.app.data.repository.DeliveryRepository
+import com.ostarosto.app.domain.model.DeliveryAvailability
+import com.ostarosto.app.domain.model.OrderType
 import com.ostarosto.app.feature.auth.AuthFlow
 import com.ostarosto.app.feature.cart.CartScreen
 import com.ostarosto.app.feature.cart.CartStore
@@ -69,6 +80,8 @@ import com.ostarosto.app.feature.profile.ProfileScreen
 import com.ostarosto.app.navigation.DeepLinkBus
 import com.ostarosto.app.navigation.LocationPickBus
 import com.ostarosto.app.navigation.Route
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
 
@@ -126,6 +139,9 @@ private fun MainGraph(onLogout: () -> Unit) {
     val selection = koinInject<SelectionStore>()
     val cartStore = koinInject<CartStore>()
     val cart by cartStore.cart.collectAsState()
+    val locationProvider = koinInject<LocationProvider>()
+    val savedAddresses = koinInject<SavedAddressStore>()
+    val deliveryRepo = koinInject<DeliveryRepository>()
 
     val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
     val showCartBar = currentRoute == Route.Menu || currentRoute == Route.Profile
@@ -140,6 +156,46 @@ private fun MainGraph(onLogout: () -> Unit) {
                 DeepLinkBus.consume()
             }
         }
+    }
+
+    // One-time GPS geofence check on launch: only when the user has no default saved
+    // address yet (a named "Work"/"Home" should win over a generic geofence nag), and
+    // only once a branch is known (MenuViewModel auto-selects one — DeliveryRepository.check
+    // needs a branchId, there's no "check across all branches" endpoint).
+    var geofencePrompt by remember { mutableStateOf<Pair<DeliveryAvailability, Pair<Double, Double>>?>(null) }
+    LaunchedEffect(Unit) {
+        selection.branch.filterNotNull().first()
+        if (savedAddresses.default() != null) return@LaunchedEffect
+        when (val fix = locationProvider.getCurrentLocation()) {
+            is LocationFix.Success -> {
+                (deliveryRepo.check(fix.latitude, fix.longitude, selection.branchRef) as? ApiResult.Success)
+                    ?.value
+                    ?.takeIf { it.available }
+                    ?.let { geofencePrompt = it to (fix.latitude to fix.longitude) }
+            }
+            else -> Unit // denied / disabled / error — skip silently, no retry loop
+        }
+    }
+
+    geofencePrompt?.let { (availability, coords) ->
+        AlertDialog(
+            onDismissRequest = { geofencePrompt = null },
+            title = { Text(Ar.geofenceConfirmTitle) },
+            text = { Text("${Ar.geofenceConfirmMessage} ${availability.branchName.orEmpty()}") },
+            confirmButton = {
+                TextButton(onClick = {
+                    selection.setOrderType(OrderType.Delivery)
+                    LocationPickBus.submit(coords.first, coords.second, availability)
+                    geofencePrompt = null
+                }) { Text(Ar.confirmDeliverHere) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    geofencePrompt = null
+                    nav.navigate(Route.LocationPicker)
+                }) { Text(Ar.chooseAnotherLocation) }
+            },
+        )
     }
 
     Scaffold(

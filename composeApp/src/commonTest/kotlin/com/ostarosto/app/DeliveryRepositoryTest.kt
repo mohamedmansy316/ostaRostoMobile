@@ -56,4 +56,26 @@ class DeliveryRepositoryTest {
         assertNull(availability.zoneId)
         assertEquals(0.0, availability.deliveryFee)
     }
+
+    @Test
+    fun listZones_maps_the_branch_zone_list() = runTest {
+        val scope = testApi(
+            ok(pathIs("/delivery/zones"), """
+                {"success":true,"data":[
+                  {"id":7,"name":"مدينة نصر - المنطقة الأولى","delivery_fee":25.0,"branch_id":1},
+                  {"id":8,"name":"مدينة نصر - المنطقة الثانية","delivery_fee":35.0,"branch_id":1}
+                ]}
+            """.trimIndent()),
+        )
+        val repo = DeliveryRepository(scope.api)
+
+        val zones = repo.listZones(branchId = "b-1").unwrap()
+
+        assertEquals(2, zones.size)
+        assertEquals(7, zones[0].id)
+        assertEquals(25.0, zones[0].deliveryFee)
+
+        val url = scope.requests.single().url
+        assertEquals("b-1", url.parameters["branch_id"])
+    }
 }

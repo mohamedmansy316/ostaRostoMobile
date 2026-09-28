@@ -6,6 +6,7 @@ import com.ostarosto.app.domain.model.Category
 import com.ostarosto.app.domain.model.Combo
 import com.ostarosto.app.domain.model.Customer
 import com.ostarosto.app.domain.model.DeliveryAvailability
+import com.ostarosto.app.domain.model.DeliveryZone
 import com.ostarosto.app.domain.model.HeroSlide
 import com.ostarosto.app.domain.model.Modifier
 import com.ostarosto.app.domain.model.ModifierOption
@@ -128,6 +129,8 @@ fun DeliveryCheckDto.toDomain() = DeliveryAvailability(
     distanceKm = distanceKm,
     estimatedTime = estimatedTime,
 )
+
+fun DeliveryZoneDto.toDomain() = DeliveryZone(id, name, deliveryFee, branchId)
 
 fun CartTotalsDto.toDomain() = CartTotals(subtotal, discount, tax, deliveryFee, total, currency, couponApplied)
 
